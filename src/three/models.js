@@ -1,7 +1,7 @@
 // Sneaker models: shape knots are [t, value] with t = 0 heel .. 1 toe,
 // heights are above the sole top, all in units of shoe length.
 
-import { zebraMap } from './textures.js'
+import { decalTexture, zebraMap } from './textures.js'
 
 const { PI, sin, cos, abs, pow, max, min } = Math
 const lerp = (a, b, k) => a + (b - a) * k
@@ -63,6 +63,30 @@ const heelTab = (half, yTop, o = {}) => (ctx) => {
   }, res(30), res(8), o.d ?? 0.0028, { lift: o.lift ?? 0.0018 }), o.role ?? 'tab')
 }
 
+// Canvas drawings for decals; colours may come from the colorway
+const pick = (v, c) => (typeof v === 'function' ? v(c) : v)
+const text = (str, o = {}) => (g, w, h, c) => {
+  if (o.bg) { g.fillStyle = pick(o.bg, c); g.fillRect(0, 0, w, h) }
+  g.font = o.font ?? 'italic 900 ' + h * 0.72 + 'px "Arial Black", Arial, sans-serif'
+  g.letterSpacing = o.spacing ?? '0px'
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  g.fillStyle = pick(o.color ?? '#000', c)
+  g.fillText(str, w / 2, h / 2 + (o.dy ?? 0))
+}
+const label = (lines, o = {}) => (g, w, h, c) => {
+  g.fillStyle = pick(o.bg, c)
+  g.fillRect(0, 0, w, h)
+  g.fillStyle = pick(o.color ?? '#fff', c)
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  lines.forEach((l, i) => {
+    g.font = (i === 0 ? 800 : 600) + ' ' + h * (o.size ?? 0.34) + 'px Arial, sans-serif'
+    g.fillText(l, w / 2, h * ((i + 1) / (lines.length + 1)))
+  })
+}
+const tagMap = (draw) => (c) => ({ map: decalTexture((g, w, h) => draw(g, w, h, c), 256, 192), color: '#ffffff' })
+
 // Sole profiles: [grow beyond the last, h as a fraction of sole height]
 const CUP = (g = 0.021) => [
   { role: 'out', profile: [[g - 0.006, 0], [g, 0.012], [g + 0.001, 0.05], [g, 0.28]] },
@@ -91,7 +115,10 @@ export const MODELS = {
     sole: { height: [[0, 0.108], [0.6, 0.098], [1, 0.092]], layers: CUP(0.021), lines: [{ grow: 0.0212, h: 0.29 }], stitch: { grow: 0.0208, h: 0.8 } },
     stripeAnchor: [0.36, 0.09],
     materials: { out: 'ribbed' },
+    maps: { tag: tagMap(label(['NIKE', 'AIR'], { bg: '#f2f1ec', color: '#9a9a9a' })) },
     trims: [
+      ({ decal }) => decal('air', text('AIR', { color: '#c9c6bf' }), { t0: 0.07, t1: 0.2, y0: 0.38, y1: 0.72, onSole: true, grow: 0.0222, sides: [1] }),
+      ({ backDecal }) => backDecal('tab', text('AIR', { color: '#cfccc4', font: '800 70px Arial, sans-serif', spacing: '10px' }), { y0: 0.25, y1: 0.29, half: 0.02, lift: 0.0065, w: 256, h: 96 }),
       perfGrid(0.83, 6, 13, 0.022, 0.24, 0.04),
       ({ perfs, thY }) => {
         const list = []
@@ -127,7 +154,11 @@ export const MODELS = {
     sole: { height: [[0, 0.075], [0.6, 0.068], [1, 0.065]], layers: CUP(0.016), lines: [{ grow: 0.0162, h: 0.3 }], stitch: { grow: 0.0158, h: 0.75 } },
     stripeAnchor: [0.33, 0.11],
     materials: { tongue: 'nylon' },
-    trims: [perfGrid(0.84, 5, 12, 0.022, 0.26, 0.042)],
+    maps: { tag: tagMap(label(['NIKE', 'AIR'], { bg: (c) => c.tag, color: '#ffffff' })) },
+    trims: [
+      perfGrid(0.84, 5, 12, 0.022, 0.26, 0.042),
+      ({ decal }) => decal('wings', text('AIR JORDAN', { color: '#2b2b2b', font: 'italic 900 44px Arial, sans-serif' }), { t0: 0.07, t1: 0.2, y0: 0.39, y1: 0.43, sides: [1], lift: 0.0045, w: 512, h: 96 }),
+    ],
     panels: [
       toeCap((th) => 0.8 + 0.04 * abs(cos(th)), { stitch: true }),
       mudguard([[0.42, 0.002], [0.5, 0.045], [0.58, 0.1], [0.64, 0.135], [0.7, 0.11], [0.78, 0.076], [0.88, 0.07], [0.95, 0.1], [1, 0.2]]),
@@ -153,6 +184,10 @@ export const MODELS = {
     sole: { height: [[0, 0.04], [0.6, 0.036], [1, 0.034]], toeWrap: 0.025, layers: FLAT(0.009) },
     stripeAnchor: [0.4, 0.1],
     materials: { toe: 'suede', out: 'rubber' },
+    maps: { tag: tagMap(label(['SAMBA'], { bg: (c) => c.tag, color: '#ffffff', size: 0.4 })) },
+    trims: [
+      ({ decal }) => decal('samba', text('SAMBA', { color: '#b8913a', font: '700 64px Arial, sans-serif', spacing: '6px' }), { t0: 0.44, t1: 0.56, y0: 0.13, y1: 0.152, lift: 0.0035, w: 512, h: 96 }),
+    ],
     panels: [
       // T-toe: toe cap plus a strip up the centre to the throat
       toeCap((th) => 0.84 - 0.13 * pow(max(0, cos((th - PI / 2) * 3.2)), 3) + 0.03 * abs(cos(th)), { lift: 0.0014, d: 0.0026 }),
@@ -185,6 +220,9 @@ export const MODELS = {
     },
     stripeAnchor: [0.4, 0.1],
     materials: { base: 'knit', tongue: 'knit', collar: 'knit', mid: 'boost', out: 'rubber', lace: 'lace', stripe: 'nylon', tab: 'nylon' },
+    trims: [
+      ({ decal }) => decal('sply', text('SPLY-350', { color: '#c8102e', font: '700 70px Arial, sans-serif', spacing: '4px' }), { t0: 0.3, t1: 0.52, y0: 0.084, y1: 0.104, lift: 0.0026, mirrorMedial: true, w: 512, h: 80 }),
+    ],
     // Zebra pattern lives in the shell's normalized uv1
     maps: { base: (c) => { const map = zebraMap(c.base, c.pattern ?? '#1c1c1c'); map.channel = 1; return { map, color: '#ffffff' } } },
     panels: [
@@ -216,7 +254,11 @@ export const MODELS = {
     sole: { height: [[0, 0.11], [0.6, 0.098], [1, 0.092]], layers: CUP(0.021), lines: [{ grow: 0.0212, h: 0.3 }], stitch: { grow: 0.0208, h: 0.78 } },
     stripeAnchor: [0.45, 0.1],
     materials: { out: 'ribbed' },
-    trims: [perfGrid(0.82, 6, 13, 0.022, 0.24, 0.04)],
+    maps: { tag: tagMap(label(['NB', '550'], { bg: '#f4f2ee', color: (c) => c.stripe })) },
+    trims: [
+      perfGrid(0.82, 6, 13, 0.022, 0.24, 0.04),
+      ({ decal }) => decal('550', text('550', { color: '#ffffff', font: 'italic 900 80px Arial, sans-serif' }), { t0: 0.06, t1: 0.15, y0: 0.13, y1: 0.165, sides: [1], lift: 0.0045, w: 256, h: 96 }),
+    ],
     panels: [
       toeCap((th) => 0.78 + 0.05 * abs(cos(th))),
       mudguard([[0.18, 0.036], [0.45, 0.042], [0.7, 0.05], [0.88, 0.064], [1, 0.085]]),
@@ -250,6 +292,10 @@ export const MODELS = {
       lines: [{ grow: 0.0272, h: 0.46, r: 0.0012 }],
     },
     stripeAnchor: [0.45, 0.1],
+    maps: { tag: tagMap(label(['990', 'MADE IN USA'], { bg: '#e8e8e8', color: '#4d5054', size: 0.24 })) },
+    trims: [
+      ({ decal }) => decal('990', text('990', { color: '#d9dadc', font: 'italic 900 80px Arial, sans-serif' }), { t0: 0.07, t1: 0.15, y0: 0.13, y1: 0.165, sides: [1], lift: 0.0045, w: 256, h: 96 }),
+    ],
     materials: { base: 'mesh', toe: 'suede', mudguard: 'suede', heel: 'suede', eyestay: 'suede', collar: 'suede', stripe: 'leather', accent: 'foam', mid: 'foam', out: 'rubber' },
     panels: [
       toeCap((th) => 0.8 + 0.04 * abs(cos(th)), { d: 0.003 }),
@@ -287,6 +333,22 @@ export const MODELS = {
     },
     stripeAnchor: [0.45, 0.12],
     materials: { base: 'canvas', heel: 'canvas', eyestay: 'canvas', tongue: 'canvas', collar: 'canvas', mid: 'rubber', out: 'ribbed', toe: 'rubber' },
+    trims: [
+      ({ decal }) => decal('patch', (g, w, h) => {
+        g.fillStyle = '#f4efe3'
+        g.beginPath(); g.arc(w / 2, h / 2, w * 0.47, 0, 7); g.fill()
+        g.strokeStyle = '#1b1b1b'; g.lineWidth = 6
+        g.beginPath(); g.arc(w / 2, h / 2, w * 0.36, 0, 7); g.stroke()
+        g.fillStyle = '#1d3f8a'; g.beginPath()
+        for (let i = 0; i < 10; i++) {
+          const r = i % 2 ? w * 0.09 : w * 0.22, a = -PI / 2 + (i * PI) / 5
+          g.lineTo(w / 2 + r * cos(a), h / 2 + r * sin(a))
+        }
+        g.fill()
+        g.fillStyle = '#1b1b1b'; g.font = '700 22px Arial, sans-serif'; g.textAlign = 'center'
+        g.fillText('ALL STAR', w / 2, h * 0.86)
+      }, { t0: 0.06, t1: 0.2, y0: 0.27, y1: 0.4, sides: [-1], lift: 0.004, w: 256, h: 256 }),
+    ],
     panels: [
       // Rubber toe cap wrapping over the toe
       mudguard([[0.82, 0.02], [0.86, 0.05], [0.9, 0.09], [0.95, 0.12], [1, 0.2]], { role: 'toe', stitch: [], lift: 0.0016, d: 0.003 }),
@@ -312,6 +374,10 @@ export const MODELS = {
     },
     stripeAnchor: [0.4, 0.11],
     materials: { base: 'canvas', toe: 'suede', mudguard: 'suede', heel: 'suede', eyestay: 'suede', collar: 'suede', mid: 'rubber', out: 'ribbed', tongue: 'canvas' },
+    maps: { tag: tagMap(label(['VANS'], { bg: '#c8102e', color: '#ffffff', size: 0.42 })) },
+    trims: [
+      ({ backDecal }) => backDecal('otw', label(['VANS', 'OFF THE WALL'], { bg: '#c8102e', color: '#ffffff', size: 0.26 }), { y0: 0.1, y1: 0.135, half: 0.024, lift: 0.0045, w: 256, h: 128 }),
+    ],
     panels: [
       toeCap((th) => 0.74 + 0.07 * abs(cos(th)), { d: 0.0028 }),
       mudguard([[0.55, 0.04], [0.7, 0.045], [0.85, 0.06], [1, 0.08]], { d: 0.0028 }),
@@ -337,6 +403,14 @@ export const MODELS = {
     sole: { height: [[0, 0.036], [0.6, 0.03], [1, 0.03]], toeWrap: 0.03, layers: FLAT(0.008) },
     stripeAnchor: [0.47, 0.11],
     materials: { toe: 'suede', out: 'rubber' },
+    trims: [
+      ({ backDecal }) => backDecal('cross', (g, w, h) => {
+        g.strokeStyle = '#e9b414'; g.lineWidth = 5
+        for (let y = 18; y < h; y += 30) {
+          g.beginPath(); g.moveTo(w * 0.3, y - 8); g.lineTo(w * 0.7, y + 8); g.moveTo(w * 0.7, y - 8); g.lineTo(w * 0.3, y + 8); g.stroke()
+        }
+      }, { y0: 0.06, y1: 0.2, half: 0.016, lift: 0.0052, w: 128, h: 256 }),
+    ],
     panels: [
       // Suede toe reinforcement running back along the sides
       mudguard([[0.56, 0.004], [0.64, 0.03], [0.76, 0.045], [0.88, 0.06], [0.95, 0.09], [1, 0.2]], { role: 'toe', d: 0.0026 }),

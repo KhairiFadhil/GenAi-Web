@@ -49,8 +49,10 @@ function gridGeometry(pts, nu, nv, { flipTest = true, uv1 = false } = {}) {
     if (uv1) uvB.push(q.u1, q.v1)
   }
   let flip = false
+  // Winding from a quad mid-grid; the edges can be degenerate (heel/toe tips)
   if (flipTest) {
-    const a = pts[0], b = pts[cols], c = pts[1]
+    const i0 = Math.floor(nu / 2) * cols + Math.floor(nv / 2)
+    const a = pts[i0], b = pts[i0 + cols], c = pts[i0 + 1]
     flip = b.p.clone().sub(a.p).cross(c.p.clone().sub(a.p)).dot(a.n) < 0
   }
   for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) {
@@ -75,7 +77,8 @@ function slab(fn, nu, nv, d, opts = {}) {
     pos.push(q.x, q.y, q.z)
     uv.push(u, v)
   }
-  const f0 = pts[0], fu = pts[cols], fv = pts[1]
+  const m0 = Math.floor(nu / 2) * cols + Math.floor(nv / 2)
+  const f0 = pts[m0], fu = pts[m0 + cols], fv = pts[m0 + 1]
   const flip = fu.p.clone().sub(f0.p).cross(fv.p.clone().sub(f0.p)).dot(f0.n) < 0
   const walls = opts.walls ?? [1, 1, 1, 1]
   const quad = (a, b, c, e, fl) => (fl ? idx.push(a, c, b, b, c, e) : idx.push(a, b, c, b, e, c))
@@ -259,7 +262,36 @@ function build(key, detail) {
     }
     addInstanced(new THREE.CircleGeometry(r, 12), 'hole', mats)
   }
-  const ctx = { perfs, backAt, seams, P, N, PO, W, H, S, spring, thY, thZ, thB, zB, yRel, tO, tS, tE, mirror, panel, cap, band, add, addInstanced, X, res, slab, surf, knots, fC, fG }
+  // Printed or embossed graphics: a canvas texture laid on the surface
+  const decal = (key, draw, o) => {
+    if (!X) return
+    const nu = 24, nv = 8
+    for (const side of o.sides ?? [1, -1]) {
+      const pts = []
+      for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++) {
+        const u = i / nu, v = j / nv, t = lerp(o.t0, o.t1, u), y = lerp(o.y0, o.y1, v)
+        const th = o.onSole ? 0 : thY(t, y, side)
+        const p = o.onSole
+          ? V(xOf(t), y * S(t) + spring(t), side * (W(t) + o.grow) * (side < 0 ? zScale(t, -1) : 1))
+          : PO(t, th, o.lift ?? 0.005)
+        const n = o.onSole ? V(0, 0, side) : N(t, th)
+        const uu = side > 0 || o.mirrorMedial ? u : 1 - u
+        pts.push({ p, n, u: uu, v })
+      }
+      parts.push({ geometry: gridGeometry(pts, nu, nv), role: 'decal', decal: { key, draw, w: o.w ?? 512, h: o.h ?? 128 } })
+    }
+  }
+  // Graphics on the heel back, centred on the back line
+  const backDecal = (key, draw, o) => {
+    if (!X) return
+    const nu = 16, nv = 8, pts = []
+    for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++) {
+      const u = i / nu, v = j / nv, { t, th } = backAt(lerp(o.y0, o.y1, v), (0.5 - u) * 2 * o.half)
+      pts.push({ p: PO(t, th, o.lift ?? 0.006), n: N(t, th), u, v })
+    }
+    parts.push({ geometry: gridGeometry(pts, nu, nv), role: 'decal', decal: { key, draw, w: o.w ?? 256, h: o.h ?? 256 } })
+  }
+  const ctx = { decal, backDecal, perfs, backAt, seams, P, N, PO, W, H, S, spring, thY, thZ, thB, zB, yRel, tO, tS, tE, mirror, panel, cap, band, add, addInstanced, X, res, slab, surf, knots, fC, fG }
   for (const fn of M.panels ?? []) fn(ctx)
 
   // Eyestays along the throat
@@ -581,6 +613,16 @@ function materials(spec, detail) {
 
 export { zebraMap, decalTexture }
 
+const decalCache = new Map()
+function decalMaterial(spec, d) {
+  const key = spec.model + d.key + JSON.stringify(spec.colors)
+  if (!decalCache.has(key)) {
+    const map = decalTexture((g, w, h) => d.draw(g, w, h, spec.colors), d.w, d.h)
+    decalCache.set(key, new THREE.MeshStandardMaterial({ map, transparent: true, alphaTest: 0.04, roughness: 0.6, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }))
+  }
+  return decalCache.get(key)
+}
+
 // spec = products.json model3D: { model, colors }
 export function createShoe(spec, detail = 'full') {
   const { parts } = geometry(spec.model, detail)
@@ -593,7 +635,8 @@ export function createShoe(spec, detail = 'full') {
       mesh.instanceMatrix.array.set(p.matrices)
       mesh.computeBoundingSphere()
     } else {
-      mesh = new THREE.Mesh(p.geometry, mats[p.role])
+      mesh = new THREE.Mesh(p.geometry, p.decal ? decalMaterial(spec, p.decal) : mats[p.role])
+      if (p.decal) mesh.renderOrder = 2
     }
     mesh.castShadow = p.cast
     mesh.receiveShadow = true

@@ -1,32 +1,60 @@
-import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import VerificationCard from '../components/VerificationCard.jsx'
-import { findProduct } from '../store.js'
+import { findProduct, useVerified } from '../store.js'
+
+const EXAMPLES = ['ORI-NK-AF1-001', 'ORI-AD-SMB-001', 'ORI-NB-550-001']
 
 export default function Verify() {
   const { code } = useParams()
   const navigate = useNavigate()
   const [input, setInput] = useState(code ?? '')
-  const product = code && findProduct(code)
+  const [history, setHistory] = useVerified()
+  const normalized = code?.trim().toUpperCase()
+  const product = normalized && findProduct(normalized)
+
+  useEffect(() => {
+    if (product) setHistory((h) => [product.id, ...h.filter((id) => id !== product.id)].slice(0, 5))
+  }, [product?.id])
+
+  const check = (value) => navigate(`/verify/${encodeURIComponent(value.trim().toUpperCase())}`)
+  const recent = history.filter((id) => id !== product?.id).map(findProduct).filter(Boolean)
 
   return (
     <div className="page narrow">
       <div className="label">ORI Verification</div>
       <h1>Verify product</h1>
-      <form onSubmit={(e) => (e.preventDefault(), navigate(`/verify/${input.trim().toUpperCase()}`))}>
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="ORI-NK-AF1-001" required className="mono" />
+      <p className="muted">Enter the ORI product ID printed on the tag, or scan the QR code on a product page.</p>
+      <form className="inline-form" onSubmit={(e) => (e.preventDefault(), check(input))}>
+        <label className="sr-only" htmlFor="code">Product ID</label>
+        <input id="code" value={input} onChange={(e) => setInput(e.target.value)} placeholder="e.g. ORI-NK-AF1-001" required autoComplete="off" spellCheck={false} />
         <button className="btn primary">Verify</button>
       </form>
-      <p className="small">Try: ORI-NK-AF1-001 · ORI-AD-SMB-001 · ORI-XXXX-999</p>
+      <div className="try">
+        <span className="label">Examples</span>
+        {EXAMPLES.map((c) => <button key={c} onClick={() => (setInput(c), check(c))}>{c}</button>)}
+      </div>
 
-      {code && (product ? (
+      {normalized && (product ? (
         <VerificationCard product={product} />
       ) : (
-        <div className="cert fail">
-          <div className="bad">✕ PRODUCT NOT FOUND</div>
-          <p>The verification code <span className="mono">{code}</span> is not available in the ORI demo database.</p>
+        <div className="cert fail" role="alert">
+          <p className="bad">✕ PRODUCT NOT FOUND</p>
+          <p>The verification code <span className="mono">{normalized}</span> isn't registered with ORI. Check the code on the tag and try again.</p>
+          <Link className="btn" to="/collection">Browse collection</Link>
         </div>
       ))}
+
+      {recent.length > 0 && (
+        <section className="history">
+          <div className="label">Checked this session</div>
+          <ul>
+            {recent.map((p) => (
+              <li key={p.id}><Link to={`/verify/${p.id}`}><span>{p.name}</span><span className="mono">{p.id}</span></Link></li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   )
 }

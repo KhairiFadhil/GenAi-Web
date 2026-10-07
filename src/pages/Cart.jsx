@@ -1,5 +1,33 @@
 import { Link } from 'react-router-dom'
+import ProductImage from '../components/ProductImage.jsx'
 import { cartTotal, findProduct, rupiah, useCart } from '../store.js'
+
+const sizeLabel = (s) => (isNaN(s) ? `Size ${s}` : `EU ${s}`)
+
+export function OrderSummary({ items, children }) {
+  const total = cartTotal(items)
+  return (
+    <aside className="summary" aria-label="Order summary">
+      <h2>Summary</h2>
+      <div className="sum-items">
+        {items.map((i) => {
+          const p = findProduct(i.id)
+          return (
+            <div className="sum-item" key={i.id + i.size}>
+              <ProductImage product={p} />
+              <div>{p.name}<span className="small">{sizeLabel(i.size)} · Qty {i.qty}</span></div>
+              <span className="mono">{rupiah(p.price * i.qty)}</span>
+            </div>
+          )
+        })}
+      </div>
+      <div className="sum-row"><span>Subtotal</span><b>{rupiah(total)}</b></div>
+      <div className="sum-row"><span>Shipping</span><b>Free · demo</b></div>
+      <div className="sum-row total"><span>Total</span><b>{rupiah(total)}</b></div>
+      {children}
+    </aside>
+  )
+}
 
 export default function Cart() {
   const [cart, setCart] = useCart()
@@ -8,33 +36,54 @@ export default function Cart() {
     setCart((c) => c.map((i) => (i.id === item.id && i.size === item.size ? { ...i, qty } : i)).filter((i) => i.qty > 0))
 
   if (!items.length) {
-    return <div className="page empty"><h1>Cart is empty</h1><Link className="btn" to="/collection">Explore collection</Link></div>
+    return (
+      <div className="page empty">
+        <div className="glyph" aria-hidden="true">0</div>
+        <h1>Cart is empty</h1>
+        <p>Pick a size on any product page to add it here.</p>
+        <Link className="btn primary" to="/collection">Explore collection</Link>
+      </div>
+    )
   }
 
+  const count = items.reduce((n, i) => n + i.qty, 0)
   return (
-    <div className="page narrow">
-      <div className="label">Your cart</div>
-      <h1>Cart</h1>
-      {items.map((item) => {
-        const p = findProduct(item.id)
-        return (
-          <div className="line" key={item.id + item.size}>
-            <div>
-              <Link to={`/product/${p.id}`}><strong>{p.name}</strong></Link>
-              <div className="small">{p.brand} · Size {item.size}</div>
-            </div>
-            <div className="qty">
-              <button onClick={() => update(item, item.qty - 1)} aria-label="Decrease">−</button>
-              <span>{item.qty}</span>
-              <button onClick={() => update(item, item.qty + 1)} disabled={item.qty >= p.stock} aria-label="Increase">+</button>
-            </div>
-            <div>{rupiah(p.price * item.qty)}</div>
-            <button className="link" onClick={() => update(item, 0)}>Remove</button>
-          </div>
-        )
-      })}
-      <div className="line total"><span>Subtotal</span><strong>{rupiah(cartTotal(items))}</strong></div>
-      <Link className="btn primary" to="/checkout">Checkout</Link>
+    <div className="page">
+      <div className="page-head">
+        <div><div className="label">Your cart · {count} {count === 1 ? 'item' : 'items'}</div><h1>Cart</h1></div>
+        <Link className="link" to="/collection">Continue shopping</Link>
+      </div>
+      <div className="cart-layout">
+        <div>
+          {items.map((item) => {
+            const p = findProduct(item.id)
+            return (
+              <div className="line" key={item.id + item.size}>
+                <Link to={`/product/${p.id}`} tabIndex={-1} aria-hidden="true"><ProductImage product={p} /></Link>
+                <div className="line-info">
+                  <span className="label">{p.brand}</span>
+                  <Link to={`/product/${p.id}`}><strong>{p.name}</strong></Link>
+                  <span className="small">{sizeLabel(item.size)} · {rupiah(p.price)} each</span>
+                  {item.qty > p.stock && <span className="small stock-low">Only {p.stock} left in stock.</span>}
+                  <button className="link remove" onClick={() => update(item, 0)}>Remove</button>
+                </div>
+                <div className="line-end">
+                  <div className="qty">
+                    <button onClick={() => update(item, item.qty - 1)} aria-label={`Decrease quantity of ${p.name}`}>−</button>
+                    <span aria-live="polite">{item.qty}</span>
+                    <button onClick={() => update(item, item.qty + 1)} disabled={item.qty >= p.stock} aria-label={`Increase quantity of ${p.name}`}>+</button>
+                  </div>
+                  <span className="mono">{rupiah(p.price * item.qty)}</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <OrderSummary items={items}>
+          <Link className="btn primary block" to="/checkout">Checkout</Link>
+          <p className="small">Checkout is a simulation. No payment will be processed.</p>
+        </OrderSummary>
+      </div>
     </div>
   )
 }

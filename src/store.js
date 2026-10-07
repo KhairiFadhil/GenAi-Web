@@ -2,9 +2,29 @@ import { useEffect, useState } from 'react'
 import products from './data/products.json'
 
 export { products }
+export const brands = [...new Set(products.map((p) => p.brand))]
+export const categories = [...new Set(products.map((p) => p.category))]
+const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+const sizeRank = (s) => (isNaN(s) ? 100 + SIZE_ORDER.indexOf(s) : Number(s))
+export const allSizes = [...new Set(products.flatMap((p) => p.sizes))].sort((a, b) => sizeRank(a) - sizeRank(b))
+export const has3D = (p) => !!p.model3D
 export const findProduct = (id) => products.find((p) => p.id === id?.trim().toUpperCase())
 export const rupiah = (n) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
+
+// Blocked storage falls back to memory for the session
+const memory = new Map()
+function safeStorage(name) {
+  try {
+    const s = window[name]
+    s.getItem('ori')
+    return s
+  } catch {
+    return { getItem: (k) => memory.get(name + k) ?? null, setItem: (k, v) => memory.set(name + k, v) }
+  }
+}
+const local = safeStorage('localStorage')
+const session = safeStorage('sessionStorage')
 
 function read(storage, key, initial) {
   try {
@@ -16,13 +36,14 @@ function read(storage, key, initial) {
 }
 
 // Same API as useState, persisted to storage and synced across every component using the same key.
-export function useStoredState(key, initial, storage = localStorage) {
+export function useStoredState(key, initial, storage = local) {
   const [value, setValue] = useState(() => read(storage, key, initial))
 
   useEffect(() => {
-    const sync = (e) => e.detail === key && setValue(read(storage, key, initial))
+    const sync = (e) => (e.detail ?? e.key) === key && setValue(read(storage, key, initial))
     window.addEventListener('ori-storage', sync)
-    return () => window.removeEventListener('ori-storage', sync)
+    window.addEventListener('storage', sync)
+    return () => (window.removeEventListener('ori-storage', sync), window.removeEventListener('storage', sync))
   }, [key])
 
   const set = (next) => {
@@ -37,7 +58,13 @@ export function useStoredState(key, initial, storage = localStorage) {
 // Cart items are { id, size, qty }; name/price always come from products.json.
 export const useCart = () => useStoredState('ori-cart', [])
 export const useWishlist = () => useStoredState('ori-wishlist', [])
-export const useOrder = () => useStoredState('ori-order', null, sessionStorage)
+export const useOrder = () => useStoredState('ori-order', null, session)
+export const useVerified = () => useStoredState('ori-verified', [], session)
+
+export const toggleIn = (list, id) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
+
+// Fire-and-forget toast: toast('Added to cart', { to: '/cart', label: 'View cart' })
+export const toast = (message, action) => window.dispatchEvent(new CustomEvent('ori-toast', { detail: { message, action, id: Date.now() } }))
 
 export const cartTotal = (cart) =>
   cart.reduce((sum, item) => sum + (findProduct(item.id)?.price ?? 0) * item.qty, 0)

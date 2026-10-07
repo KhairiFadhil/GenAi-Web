@@ -1,19 +1,49 @@
 import { useEffect, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Vector3 } from 'three'
+import { HalfFloatType, Vector3, WebGLRenderTarget } from 'three'
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
+import { N8AOPass } from 'n8ao'
 import { createShoe } from '../three/shoe.js'
-import { createStudio, roomEnvironment } from '../three/studio.js'
+import { createStudio, roomEnvironment, studioBackdrop } from '../three/studio.js'
 
-export function Studio({ intensity = 0.7, shadows = true }) {
+// Same light, backdrop and exposure as the product photos
+export function Studio({ intensity = 0.6, shadows = true, backdrop = true }) {
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
   const rig = useMemo(() => createStudio({ shadows }), [shadows])
   useEffect(() => {
     scene.environment = roomEnvironment(gl)
     scene.environmentIntensity = intensity
-    return () => { scene.environment = null }
-  }, [gl, scene, intensity])
+    if (backdrop) scene.background = studioBackdrop()
+    gl.toneMappingExposure = 0.82
+    return () => { scene.environment = null; scene.background = null }
+  }, [gl, scene, intensity, backdrop])
   return <primitive object={rig} />
+}
+
+// Ambient occlusion + tone mapping; takes over rendering for its canvas
+export function StudioEffects({ quality = 'Medium' }) {
+  const gl = useThree((s) => s.gl)
+  const scene = useThree((s) => s.scene)
+  const camera = useThree((s) => s.camera)
+  const size = useThree((s) => s.size)
+  const composer = useMemo(() => {
+    const c = new EffectComposer(gl, new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4 }))
+    const ao = new N8AOPass(scene, camera, 1, 1)
+    Object.assign(ao.configuration, { aoRadius: 0.08, distanceFalloff: 0.4, intensity: 3, gammaCorrection: false })
+    ao.setQualityMode(quality)
+    c.addPass(ao)
+    c.addPass(new OutputPass())
+    return c
+  }, [gl, scene, camera, quality])
+  useEffect(() => {
+    composer.setPixelRatio(gl.getPixelRatio())
+    composer.setSize(size.width, size.height)
+  }, [composer, gl, size])
+  useEffect(() => () => composer.dispose(), [composer])
+  useFrame(() => composer.render(), 1)
+  return null
 }
 
 export function ProceduralShoe({ spec, detail = 'full', ...props }) {

@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, useGLTF, useProgress } from '@react-three/drei'
 import { Box3, MathUtils, Spherical, Vector3 } from 'three'
 import { shoeAnchors } from '../three/shoe.js'
-import { PinLayer, Pins, ProceduralShoe, Studio } from './SceneKit.jsx'
+import { PinLayer, Pins, ProceduralShoe, Studio, StudioEffects } from './SceneKit.jsx'
 
 const TARGET = [0, 0.13, 0]
 const VIEWS = {
@@ -130,9 +130,9 @@ export default function ProductViewer({ product: p }) {
     setActive(i)
     if (!pins[i]) return
     const { position, normal = [0.4, 0.6, 0.7] } = pins[i]
-    const n = new Vector3(...normal).normalize()
-    n.y = Math.max(n.y, 0.18)
-    const cam = new Vector3(...position).add(n.normalize().multiplyScalar(0.95))
+    // Lean toward the lateral side so every detail keeps context
+    const dir = new Vector3(...normal).normalize().add(new Vector3(0, 0.35, 0.9)).normalize()
+    const cam = new Vector3(...position).add(dir.multiplyScalar(1.25))
     api.current?.fly(cam.toArray(), position)
   }
 
@@ -149,9 +149,8 @@ export default function ProductViewer({ product: p }) {
       <div className="viewer">
         <Canvas
           shadows="percentage"
-          dpr={[1, 2]}
+          dpr={[1, window.innerWidth < 720 ? 1.5 : 2]}
           camera={{ position: VIEWS['3/4'], fov: 30, near: 0.01, far: 50 }}
-          onCreated={({ gl }) => { gl.toneMappingExposure = 1.05 }}
           aria-label={`Interactive 3D model of ${p.name}`}
         >
           <Studio />
@@ -160,6 +159,7 @@ export default function ProductViewer({ product: p }) {
           </Suspense>
           <Rig api={api} autoRotate={spin} onUserStart={stop} />
           <PinLayer pins={pins} nodes={pinEls} />
+          <StudioEffects quality={window.innerWidth < 720 ? 'Low' : 'Medium'} />
         </Canvas>
 
         <Pins>

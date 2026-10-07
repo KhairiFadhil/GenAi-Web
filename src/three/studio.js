@@ -28,6 +28,23 @@ export function roomEnvironment(renderer) {
   return envCache.get(renderer)
 }
 
+// Screen-space backdrop; pre-brightened so ACES output lands on #1d1d20 → #0e0e0f
+let backdrop
+export function studioBackdrop() {
+  if (backdrop) return backdrop
+  const c = document.createElement('canvas')
+  c.width = c.height = 512
+  const g = c.getContext('2d')
+  const r = g.createRadialGradient(256, 215, 0, 256, 215, 384)
+  r.addColorStop(0, 'rgb(47, 47, 50)')
+  r.addColorStop(1, 'rgb(32, 32, 33)')
+  g.fillStyle = r
+  g.fillRect(0, 0, 512, 512)
+  backdrop = new THREE.CanvasTexture(c)
+  backdrop.colorSpace = THREE.SRGBColorSpace
+  return backdrop
+}
+
 let contactTex
 export const contactShadowTexture = () => (contactTex ??= radialTexture('rgba(0,0,0,0.75)', 'rgba(0,0,0,0)'))
 

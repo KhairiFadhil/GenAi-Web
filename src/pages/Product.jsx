@@ -50,7 +50,7 @@ export default function Product() {
       <div className="page empty">
         <div className="glyph" aria-hidden="true">?</div>
         <h1>Product not found</h1>
-        <p>This product ID is not in the ORI demo catalog.</p>
+        <p>This product ID isn't in the ORI catalog.</p>
         <div className="row"><Link className="btn primary" to="/collection">Back to collection</Link><Link className="btn" to="/verify">Verify an ID</Link></div>
       </div>
     )
@@ -144,7 +144,7 @@ export default function Product() {
             <QRCodeSVG value={verifyUrl(p.id)} size={84} bgColor="#F5F5F5" fgColor="#0A0A0A" />
             <div>
               <div className="label">ORI Verification</div>
-              <p className="small">Scan with your phone camera to open this product's demo certificate.</p>
+              <p className="small">Scan with your phone camera to open this product's certificate.</p>
             </div>
           </div>
         </div>

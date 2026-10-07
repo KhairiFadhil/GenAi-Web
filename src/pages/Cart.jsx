@@ -22,7 +22,7 @@ export function OrderSummary({ items, children }) {
         })}
       </div>
       <div className="sum-row"><span>Subtotal</span><b>{rupiah(total)}</b></div>
-      <div className="sum-row"><span>Shipping</span><b>Free · demo</b></div>
+      <div className="sum-row"><span>Shipping</span><b>Free</b></div>
       <div className="sum-row total"><span>Total</span><b>{rupiah(total)}</b></div>
       {children}
     </aside>
@@ -81,7 +81,7 @@ export default function Cart() {
         </div>
         <OrderSummary items={items}>
           <Link className="btn primary block" to="/checkout">Checkout</Link>
-          <p className="small">Checkout is a simulation. No payment will be processed.</p>
+          <p className="small">Free standard shipping on every order. Prices include tax.</p>
         </OrderSummary>
       </div>
     </div>

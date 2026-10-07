@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import VerificationCard from '../components/VerificationCard.jsx'
 import { findProduct, useVerified } from '../store.js'
 
-const DEMO = ['ORI-NK-AF1-001', 'ORI-AD-SMB-001', 'ORI-NB-550-001', 'ORI-XXXX-999']
+const EXAMPLES = ['ORI-NK-AF1-001', 'ORI-AD-SMB-001', 'ORI-NB-550-001']
 
 export default function Verify() {
   const { code } = useParams()
@@ -31,8 +31,8 @@ export default function Verify() {
         <button className="btn primary">Verify</button>
       </form>
       <div className="try">
-        <span className="label">Try</span>
-        {DEMO.map((c) => <button key={c} onClick={() => (setInput(c), check(c))}>{c}</button>)}
+        <span className="label">Examples</span>
+        {EXAMPLES.map((c) => <button key={c} onClick={() => (setInput(c), check(c))}>{c}</button>)}
       </div>
 
       {normalized && (product ? (
@@ -40,7 +40,7 @@ export default function Verify() {
       ) : (
         <div className="cert fail" role="alert">
           <p className="bad">✕ PRODUCT NOT FOUND</p>
-          <p>The verification code <span className="mono">{normalized}</span> is not available in the ORI demo database. Check the code on the tag and try again.</p>
+          <p>The verification code <span className="mono">{normalized}</span> isn't registered with ORI. Check the code on the tag and try again.</p>
           <Link className="btn" to="/collection">Browse collection</Link>
         </div>
       ))}

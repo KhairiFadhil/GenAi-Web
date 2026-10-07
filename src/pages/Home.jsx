@@ -13,7 +13,7 @@ const STEPS = [
   ['Explore', 'Walk the 3D brand shelf and step into any cubby.', '/#brands'],
   ['Inspect', 'Rotate, zoom and open hotspots on every sneaker.', '/product/ORI-NK-AF1-001'],
   ['Verify', 'Check a product ID or scan its QR code with your phone.', '/verify'],
-  ['Buy', 'Pick a size, fill the cart, run a simulated checkout.', '/collection'],
+  ['Buy', 'Pick your size and check out in a few steps.', '/collection'],
 ]
 
 function ShelfFallback({ message }) {
@@ -92,7 +92,7 @@ export default function Home() {
           <div>
             <div className="label">ORI Verification</div>
             <h2>Every pair carries an ORI&nbsp;ID.</h2>
-            <p>Type a product ID or scan the QR code on a product page to open its demo certificate.</p>
+            <p>Type a product ID or scan the QR code on a product page to open its certificate.</p>
             <form className="inline-form" onSubmit={(e) => (e.preventDefault(), navigate(`/verify/${code.trim().toUpperCase()}`))}>
               <label className="sr-only" htmlFor="home-code">Product ID</label>
               <input id="home-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="ORI-NK-AF1-001" required />

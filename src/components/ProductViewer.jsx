@@ -183,7 +183,7 @@ export default function ProductViewer({ product: p }) {
 
         {hotspot && (
           <div className="hotspot-info" role="status">
-            <div className="label">Detail {active + 1}/{p.hotspots.length} · Demo info</div>
+            <div className="label">Detail {active + 1}/{p.hotspots.length}</div>
             <strong>{hotspot.label}</strong>
             <p>{hotspot.description}</p>
             <div className="row">

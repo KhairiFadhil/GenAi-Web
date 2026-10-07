@@ -66,7 +66,7 @@ export default function Navbar() {
       {open && (
         <nav id="mobile-menu" className="mobile-menu" aria-label="Mobile">
           {links}
-          <span className="label">ORI · Academic prototype</span>
+          <span className="label">ORI · Originals, up close</span>
         </nav>
       )}
       <SizeGuide ref={guide} />

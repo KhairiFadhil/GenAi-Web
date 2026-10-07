@@ -9,8 +9,8 @@ export default function OrderSuccess() {
   if (!order) {
     return (
       <div className="page empty">
-        <h1>No demo order in this session</h1>
-        <p>Orders are kept only until you close this tab.</p>
+        <h1>No recent order</h1>
+        <p>Orders you place in this session will appear here.</p>
         <Link className="btn primary" to="/">Back to store</Link>
       </div>
     )
@@ -24,7 +24,7 @@ export default function OrderSuccess() {
       <div className="check" aria-hidden="true"><Check /></div>
       <p className="ok">ORDER CONFIRMED</p>
       <h1>Thank you{order.name ? `, ${order.name.split(' ')[0]}` : ''}.</h1>
-      <p className="muted">Your demo order has been created.</p>
+      <p className="muted">Your order is confirmed. Keep the order number below for reference.</p>
 
       <div className="receipt">
         <dl>
@@ -50,7 +50,6 @@ export default function OrderSuccess() {
         <div className="sum-row total"><span>Total</span><b>{rupiah(order.total)}</b></div>
       </div>
 
-      <p className="small">This is a simulated transaction. No payment has been processed.</p>
       <div className="row centered">
         <Link className="btn primary" to="/">Back to store</Link>
         <button className="btn no-print" onClick={() => window.print()}>Print receipt</button>

@@ -76,5 +76,7 @@ export function addToCart(cart, id, size) {
   return cart.map((i) => (i === hit ? { ...i, qty: Math.min(i.qty + 1, stock) } : i))
 }
 
-export const orderNumber = () =>
-  'ORI-DEMO-' + Math.random().toString(36).slice(2, 7).toUpperCase().padEnd(5, '0')
+export const orderNumber = () => {
+  const d = new Date(), pad = (n) => String(n).padStart(2, '0')
+  return `ORI-${String(d.getFullYear()).slice(2)}${pad(d.getMonth() + 1)}${pad(d.getDate())}-` + Math.random().toString(36).slice(2, 7).toUpperCase().padEnd(5, '0')
+}

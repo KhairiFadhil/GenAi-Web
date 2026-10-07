@@ -19,7 +19,7 @@ function NotFound() {
     <div className="page empty">
       <div className="glyph" aria-hidden="true">404</div>
       <h1>Page not found</h1>
-      <p>This page is not part of the ORI demo.</p>
+      <p>This page doesn't exist or has moved.</p>
       <div className="row"><Link className="btn primary" to="/">Back to store</Link><Link className="btn" to="/collection">Browse collection</Link></div>
     </div>
   )
@@ -62,11 +62,10 @@ export default function App() {
       <footer className="footer">
         <div className="footer-grid">
           <div>
-            <strong>ACADEMIC PROTOTYPE</strong>
+            <strong>ORI</strong>
             <p>
-              ORI is a fictional academic prototype. Product information, prices, stock, product IDs, QR codes,
-              verification results, and transactions shown in this application are simulated for demonstration
-              purposes only. ORI is not a real store and does not process real transactions.
+              A concept store for original sneakers and streetwear. Explore every pair in 3D, check its ORI product ID,
+              and shop with confidence.
             </p>
           </div>
           <div>
@@ -87,7 +86,7 @@ export default function App() {
           </div>
         </div>
         <div className="footer-base small">
-          <span>© 2026 ORI · UTS Generative AI</span>
+          <span>© 2026 ORI. Built for a university project; product details and prices are illustrative.</span>
           <span className="mono">Explore → Inspect → Verify → Buy</span>
         </div>
       </footer>

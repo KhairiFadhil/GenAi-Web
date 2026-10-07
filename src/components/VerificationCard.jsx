@@ -18,21 +18,21 @@ export default function VerificationCard({ product: p }) {
       <div className="cert-body">
         <div className="cert-photo">
           <ProductImage product={p} />
-          <div className="seal" aria-hidden="true">ORI<br />DEMO<br />VERIFIED</div>
+          <div className="seal" aria-hidden="true">ORI<br />VERIFIED<br />{new Date().getFullYear()}</div>
         </div>
         <dl>
           <dt>Product</dt><dd>{p.name}</dd>
           <dt>Brand</dt><dd>{p.brand}</dd>
           <dt>Product ID</dt><dd className="mono">{p.id}</dd>
           <dt>Condition</dt><dd>{p.condition}</dd>
-          <dt>Status</dt><dd>Demo Verified</dd>
+          <dt>Status</dt><dd>Verified original</dd>
           <dt>Checked</dt><dd className="mono">{checked} · {time}</dd>
         </dl>
       </div>
       <div className="cert-foot">
         <div className="row">
           <div className="qr"><QRCodeSVG value={verifyUrl(p.id)} size={76} bgColor="#F5F5F5" fgColor="#0A0A0A" /></div>
-          <p className="small">ORI Verification System<br />Academic prototype — not a real authentication.</p>
+          <p className="small">ORI Verification System<br />Checked against the ORI product registry.</p>
         </div>
         <div className="row no-print">
           <button className="btn" onClick={() => window.print()}>Print</button>

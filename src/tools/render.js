@@ -128,7 +128,7 @@ if (!only) {
   g.fillText('ORI', 64, 560)
   g.fillStyle = '#8a8a8a'
   g.font = '400 16px "JetBrains Mono Variable", Consolas, monospace'
-  g.fillText('ACADEMIC PROTOTYPE', 150, 556)
+  g.fillText('ORIGINALS, UP CLOSE', 150, 556)
   shots['og.webp'] = og.toDataURL('image/webp', 0.9)
   grid.insertAdjacentHTML('beforeend', `<figure style="grid-column: 1 / -1"><img src="${shots['og.webp']}" alt=""><figcaption>og.webp</figcaption></figure>`)
 }

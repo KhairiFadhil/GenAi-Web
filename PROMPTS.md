@@ -11,7 +11,8 @@ Catat setiap pemakaian AI yang penting. Ini bahan manual PDF bagian 5a dan prese
 | 5 | 2026-10-07 | Visual | Claude Code + three.js | Render foto studio dari model prosedural | 18 foto `public/img/products/*.webp` (3/4 + samping), `og.webp`, ilustrasi SVG hoodie & tee | — |
 | 6 | 2026-10-07 | Copy | Claude Code | Teks hotspot per produk | Label & deskripsi hotspot di `products.json` | Review tim |
 | 7 | 2026-10-07 | Code / UI | Claude Code | "Tutup gap KONSEP + polish" | Rak 3D model kubus per brand, viewer (sudut kamera, zoom, hotspot fly-to), katalog + filter, sertifikat verifikasi, wishlist → cart, checkout, menu mobile, size guide | — |
-| 8 | | 3D | (Meshy / Tripo / Rodin) | Foto AF1 → image-to-3D | `public/models/nike-af1.glb` (opsional, viewer sudah mendukung GLB) | gltf-transform optimize |
+| 8 | 2026-10-07 | 3D | Claude Code | "Modelnya masih kurang bagus, poles sampai 90% mirip produk asli" | Generator ditulis ulang per model: 9 siluet (low/high-top, cupsole, vulkanisir, Boost), panel overlay, jahitan, tali + simpul, decal teks, knit zebra, ambient occlusion. Dibandingkan dengan foto referensi Wikimedia Commons per iterasi | Cek kemiripan per produk |
+| 9 | | 3D | (Meshy / Tripo / Rodin) | Foto AF1 → image-to-3D | `public/models/nike-af1.glb` (opsional, viewer sudah mendukung GLB) | gltf-transform optimize |
 
 ## Before / After
 

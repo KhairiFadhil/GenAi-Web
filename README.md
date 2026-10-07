@@ -19,17 +19,19 @@ npm run preview    # serve dist/ locally
 
 ## How the 3D works
 
-- `src/three/shoe.js` builds a procedural low-top sneaker. Geometry is cached per silhouette, so a colorway only swaps materials.
+- `src/three/shoe.js` builds a procedural sneaker from a model description: last shape, collar line, throat, panels, stitching, laces with a bow, sole layers and decals. Geometry is cached per model, so a colorway only swaps materials.
+- `src/three/models.js` holds the nine silhouettes (`af1`, `aj1`, `samba`, `yeezy`, `nb550`, `nb990`, `chuck`, `vans`, `mexico`).
+- `src/three/textures.js` generates the leather, suede, canvas, knit and mesh maps plus the zebra knit pattern.
 - Each product's `model3D` in `src/data/products.json` decides how it is shown:
-  - an object `{ stripe, sole, perf, colors }` → procedural shoe
+  - `{ "model": "af1", "colors": { ... } }` → procedural shoe; colour roles are `base`, `toe`, `mudguard`, `heel`, `eyestay`, `collar`, `stripe`, `tab`, `tongue`, `tag`, `lace`, `mid`, `out`, `thread`, `lining`, `accent`
   - a string `"/models/x.glb"` → any GLB, auto-scaled to the same footprint
   - `null` → photos only
 - Hotspots use `"at": "toe" | "laces" | "tongue" | "collar" | "heel" | "stripe" | "stitching" | "sole"` for procedural shoes, or `"position": [x, y, z]` for GLBs.
-- Stripe variants: `swoosh`, `three`, `jazz`, `tiger`, `n`, `line`, `none`.
+- The viewer and the photo renderer share one studio: key/fill/rim lights, room environment, ambient occlusion (N8AO) and ACES tone mapping.
 
 ## Product photos
 
-Photos in `public/img/products/` are rendered from the same model. After changing a colorway, run `npm run dev`, open `/render.html` and click **Download all**. The page is dev-only and not part of the build.
+Photos in `public/img/products/` and `public/og.webp` are rendered from the same models. After changing a model or colorway, run `npm run dev`, open `/render.html` and click **Download all**. Add `?debug` to colour every part differently, `?only=ORI-NK-AF1-001` for one product, `?views=1,2,back,above` for other angles. The page is dev-only and not part of the build.
 
 ## Structure
 

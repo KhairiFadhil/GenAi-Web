@@ -187,6 +187,7 @@ function build(key, detail) {
 
   // Panels: 't' mode spans t, with th range per t on each side
   const seams = []
+  const K = M.thick ?? 1.7 // overlay thickness scale (real leather is ~1.5 mm)
   const inset = (t, th, dist, dir) => th + (dir * dist) / dTh(t, th)
   const panel = (role, t0, t1, a, b, o = {}) => {
     const sides = o.sides ?? [1, -1]
@@ -199,14 +200,14 @@ function build(key, detail) {
       add(slab((u, v) => {
         const t = lerp(t0, t1, (1 - cos(PI * u)) / 2), [A, B] = range(t)
         return surf(t, mirror(lerp(A, B, v), side))
-      }, res(o.nu ?? 60), res(o.nv ?? 10), o.d ?? 0.0022, { lift: o.lift ?? 0.0006, walls: o.walls }), role)
+      }, res(o.nu ?? 60), res(o.nv ?? 10), (o.d ?? 0.0022) * K, { lift: (o.lift ?? 0.0006) * K, walls: o.walls }), role)
       if (X && o.stitch) for (const edge of o.stitch) {
         const path = []
         for (let i = 0; i <= 80; i++) {
           const t = lerp(t0 + (o.stitchTrim ?? 0.004), t1 - (o.stitchTrim ?? 0.004), i / 80), [A, B] = range(t)
           if (B - A < 0.02) continue
           const th = edge === 'b' ? inset(t, B, 0.006, -1) : inset(t, A, 0.006, 1)
-          path.push({ p: PO(t, mirror(th, side), (o.lift ?? 0.0006) + (o.d ?? 0.0022)), n: N(t, mirror(th, side)) })
+          path.push({ p: PO(t, mirror(th, side), ((o.lift ?? 0.0006) + (o.d ?? 0.0022)) * K), n: N(t, mirror(th, side)) })
         }
         if (path.length > 2) seams.push(path)
       }
@@ -217,19 +218,19 @@ function build(key, detail) {
     add(slab((u, v) => {
       const th = lerp(th0, th1, u)
       return surf(lerp(a(th), b(th), v), th)
-    }, res(o.nu ?? 60), res(o.nv ?? 20), o.d ?? 0.0022, { lift: o.lift ?? 0.0004, walls: o.walls }), role)
+    }, res(o.nu ?? 60), res(o.nv ?? 20), (o.d ?? 0.0022) * K, { lift: (o.lift ?? 0.0004) * K, walls: o.walls }), role)
     if (X && o.stitch) {
       const path = []
       for (let i = 0; i <= 90; i++) {
         const th = lerp(th0 + 0.03, th1 - 0.03, i / 90), t = a(th) + 0.009
-        path.push({ p: PO(t, th, (o.lift ?? 0.0004) + (o.d ?? 0.0022)), n: N(t, th) })
+        path.push({ p: PO(t, th, ((o.lift ?? 0.0004) + (o.d ?? 0.0022)) * K), n: N(t, th) })
       }
       seams.push(path)
     }
   }
   // Side graphics: (u, v) -> [t, yRel]
   const band = (role, fn, o = {}) => {
-    const lift = o.lift ?? 0.0016, d = o.d ?? 0.0018
+    const lift = (o.lift ?? 0.0016) * K, d = (o.d ?? 0.0018) * K
     for (const side of o.sides ?? [1, -1]) {
       add(slab((u, v) => {
         const [t, y] = fn(u, v)
@@ -252,6 +253,7 @@ function build(key, detail) {
   // Punched holes at (t, th) positions on the given surface lift
   const perfs = (list, r = 0.0032, lift = 0.0028) => {
     if (!X) return
+    lift *= K
     const o = new THREE.Object3D(), mats = []
     for (const [t, th] of list) {
       const p = PO(t, th, lift), n = N(t, th)
@@ -273,7 +275,7 @@ function build(key, detail) {
         const th = o.onSole ? 0 : thY(t, y, side)
         const p = o.onSole
           ? V(xOf(t), y * S(t) + spring(t), side * (W(t) + o.grow) * (side < 0 ? zScale(t, -1) : 1))
-          : PO(t, th, o.lift ?? 0.005)
+          : PO(t, th, (o.lift ?? 0.005) * K)
         const n = o.onSole ? V(0, 0, side) : N(t, th)
         const uu = side > 0 || o.mirrorMedial ? u : 1 - u
         pts.push({ p, n, u: uu, v })
@@ -287,11 +289,11 @@ function build(key, detail) {
     const nu = 16, nv = 8, pts = []
     for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++) {
       const u = i / nu, v = j / nv, { t, th } = backAt(lerp(o.y0, o.y1, v), (0.5 - u) * 2 * o.half)
-      pts.push({ p: PO(t, th, o.lift ?? 0.006), n: N(t, th), u, v })
+      pts.push({ p: PO(t, th, (o.lift ?? 0.006) * K), n: N(t, th), u, v })
     }
     parts.push({ geometry: gridGeometry(pts, nu, nv), role: 'decal', decal: { key, draw, w: o.w ?? 256, h: o.h ?? 256 } })
   }
-  const ctx = { decal, backDecal, perfs, backAt, seams, P, N, PO, W, H, S, spring, thY, thZ, thB, zB, yRel, tO, tS, tE, mirror, panel, cap, band, add, addInstanced, X, res, slab, surf, knots, fC, fG }
+  const ctx = { K, decal, backDecal, perfs, backAt, seams, P, N, PO, W, H, S, spring, thY, thZ, thB, zB, yRel, tO, tS, tE, mirror, panel, cap, band, add, addInstanced, X, res, slab, surf, knots, fC, fG }
   for (const fn of M.panels ?? []) fn(ctx)
 
   // Eyestays along the throat
@@ -416,14 +418,33 @@ function build(key, detail) {
     const [pts, nrm] = lacePath(rows[0], eyeZ(rows[0]), rows[0], -eyeZ(rows[0]))
     add(laceGeo(pts, nrm), 'lace')
   }
-  // Bow resting on the top bar
+  // Bow on the top bar: knot, two loops lying on the upper, two hanging ends
   if (L.bow) {
-    const c = tongueAt(rows[0] + 0.012, 0, laceLift + 0.004)
+    const tk = rows[0] + 0.006, k = tongueAt(tk, 0, laceLift + 0.006)
+    const on = (t, z, lift) => { const th = z >= 0 ? thZ(t, min(abs(z), W(t) * 0.98)) : thZ(t, min(abs(z), W(t) * 0.98), -1); return { p: PO(t, th, lift), n: N(t, th) } }
+    const knot = new THREE.SphereGeometry(L.w * 0.42, 12, 8)
+    knot.scale(1.3, 0.7, 1)
+    knot.translate(k.p.x, k.p.y + L.w * 0.15, k.p.z)
+    add(knot, 'lace')
     for (const side of [1, -1]) {
-      const loop = [c.p.clone(), c.p.clone().add(V(-0.012, 0.012, side * 0.035)), c.p.clone().add(V(0.022, 0.02, side * 0.07)), c.p.clone().add(V(0.05, 0.008, side * 0.05)), c.p.clone().add(V(0.012, 0.002, side * 0.008))]
-      add(laceGeo(loop, loop.map(() => V(0, 1, 0))), 'lace')
-      const tail = [c.p.clone(), c.p.clone().add(V(0.03, -0.004, side * 0.03)), c.p.clone().add(V(0.06, -0.03, side * 0.075)), c.p.clone().add(V(0.075, -0.07, side * 0.11))]
-      add(laceGeo(tail, tail.map(() => V(side * 0.3, 1, 0).normalize())), 'lace')
+      const B = L.bow
+      const loop = [
+        { p: k.p.clone(), n: k.n },
+        on(tk - 0.012, side * B.loop * 0.45, laceLift + 0.012),
+        on(tk - 0.02, side * B.loop, laceLift + 0.006),
+        on(tk + 0.012, side * B.loop * 1.05, laceLift + 0.005),
+        on(tk + 0.016, side * B.loop * 0.4, laceLift + 0.01),
+        { p: k.p.clone().add(V(0.004, 0.002, side * 0.004)), n: k.n },
+      ]
+      add(laceGeo(loop.map((q) => q.p), loop.map((q) => q.n)), 'lace')
+      const tEnd = tk + B.drop
+      const tail = [
+        { p: k.p.clone().add(V(0.003, 0, side * 0.003)), n: k.n },
+        on(tk + B.drop * 0.3, side * B.tail * 0.35, laceLift + 0.008),
+        on(tk + B.drop * 0.7, side * B.tail * 0.75, 0.01),
+        on(tEnd, side * B.tail, 0.006),
+      ]
+      add(laceGeo(tail.map((q) => q.p), tail.map((q) => q.n)), 'lace')
     }
   }
 

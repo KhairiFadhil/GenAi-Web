@@ -55,12 +55,12 @@ const perfGrid = (t0, rows, cols, dt, th0, dth, lift = 0.0032, r = 0.0034, tMax 
 }
 // Heel tab: strip over the back centre line, from sole to a height
 const heelTab = (half, yTop, o = {}) => (ctx) => {
-  const { slab, surf, backAt, S, spring, res, add } = ctx
+  const { slab, surf, backAt, S, spring, res, add, K } = ctx
   add(slab((u, v) => {
     const y0 = S(0.002) + spring(0.002) + (o.from ?? 0.004)
     const { t, th } = backAt(lerp(y0, yTop, u), (v - 0.5) * 2 * half * (1 - (o.taper ?? 0) * u))
     return surf(t, th)
-  }, res(30), res(8), o.d ?? 0.0028, { lift: o.lift ?? 0.0018 }), o.role ?? 'tab')
+  }, res(30), res(8), (o.d ?? 0.0028) * K, { lift: (o.lift ?? 0.0018) * K }), o.role ?? 'tab')
 }
 
 // Canvas drawings for decals; colours may come from the colorway
@@ -111,7 +111,7 @@ export const MODELS = {
     collarPad: 0.014, collarFront: -0.012,
     eyestay: { w: 0.055 },
     tongue: { wide: 0.03, rise: 0.07, back: 0.012, lift: 0.007, d: 0.012, rim: 0.011, tag: [0.034, 0.024] },
-    laces: { rows: 6, w: 0.024, d: 0.0045, arch: 0.016, start: 0.02, end: 0.008 },
+    laces: { rows: 6, w: 0.024, d: 0.0045, arch: 0.016, start: 0.02, end: 0.008, bow: { loop: 0.085, tail: 0.11, drop: 0.12 } },
     sole: { height: [[0, 0.108], [0.6, 0.098], [1, 0.092]], layers: CUP(0.021), lines: [{ grow: 0.0212, h: 0.29 }], stitch: { grow: 0.0208, h: 0.8 } },
     stripeAnchor: [0.36, 0.09],
     materials: { out: 'ribbed' },
@@ -150,7 +150,7 @@ export const MODELS = {
     collarPad: 0.012, collarFront: -0.01,
     eyestay: { w: 0.05 },
     tongue: { wide: 0.028, rise: 0.06, back: 0.005, lift: 0.006, d: 0.01, rim: 0.009, tag: [0.034, 0.03] },
-    laces: { rows: 9, w: 0.02, d: 0.004, arch: 0.012, start: 0.015, end: 0.008 },
+    laces: { rows: 9, w: 0.02, d: 0.004, arch: 0.012, start: 0.015, end: 0.008, bow: { loop: 0.075, tail: 0.1, drop: 0.12 } },
     sole: { height: [[0, 0.075], [0.6, 0.068], [1, 0.065]], layers: CUP(0.016), lines: [{ grow: 0.0162, h: 0.3 }], stitch: { grow: 0.0158, h: 0.75 } },
     stripeAnchor: [0.33, 0.11],
     materials: { tongue: 'nylon' },
@@ -180,7 +180,7 @@ export const MODELS = {
     collarPad: 0.008, collarFront: -0.012,
     eyestay: { w: 0.036 },
     tongue: { wide: 0.026, rise: 0.06, back: 0.02, lift: 0.004, d: 0.006, rim: 0.004, tag: [0.03, 0.022] },
-    laces: { rows: 7, w: 0.016, d: 0.003, arch: 0.01, start: 0.02, end: 0.008 },
+    laces: { rows: 7, w: 0.016, d: 0.003, arch: 0.01, start: 0.02, end: 0.008, bow: { loop: 0.07, tail: 0.095, drop: 0.11 } },
     sole: { height: [[0, 0.04], [0.6, 0.036], [1, 0.034]], toeWrap: 0.025, layers: FLAT(0.009) },
     stripeAnchor: [0.4, 0.1],
     materials: { toe: 'suede', out: 'rubber' },
@@ -209,7 +209,7 @@ export const MODELS = {
     collarPad: 0.009, collarFront: -0.01,
     eyestay: { w: 0 },
     tongue: { wide: 0.03, rise: 0.02, back: 0.0, lift: 0.002, d: 0.004, rim: 0.005 },
-    laces: { rows: 6, w: 0.009, style: 'rope', arch: 0.014, start: 0.02, end: 0.008, eyelets: 'none' },
+    laces: { rows: 6, w: 0.009, style: 'rope', arch: 0.014, start: 0.02, end: 0.008, eyelets: 'none', bow: { loop: 0.08, tail: 0.1, drop: 0.11 } },
     sole: {
       height: [[0, 0.125], [0.5, 0.105], [1, 0.09]],
       layers: [
@@ -250,7 +250,7 @@ export const MODELS = {
     collarPad: 0.016, collarFront: -0.012,
     eyestay: { w: 0.05 },
     tongue: { wide: 0.03, rise: 0.075, back: 0.012, lift: 0.007, d: 0.012, rim: 0.011, tag: [0.03, 0.03] },
-    laces: { rows: 6, w: 0.022, d: 0.004, arch: 0.014, start: 0.02, end: 0.008 },
+    laces: { rows: 6, w: 0.022, d: 0.004, arch: 0.014, start: 0.02, end: 0.008, bow: { loop: 0.085, tail: 0.11, drop: 0.12 } },
     sole: { height: [[0, 0.11], [0.6, 0.098], [1, 0.092]], layers: CUP(0.021), lines: [{ grow: 0.0212, h: 0.3 }], stitch: { grow: 0.0208, h: 0.78 } },
     stripeAnchor: [0.45, 0.1],
     materials: { out: 'ribbed' },
@@ -281,7 +281,7 @@ export const MODELS = {
     collarPad: 0.016, collarFront: -0.012,
     eyestay: { w: 0.045 },
     tongue: { wide: 0.03, rise: 0.06, back: 0.015, lift: 0.007, d: 0.01, rim: 0.01, tag: [0.03, 0.03] },
-    laces: { rows: 7, w: 0.016, d: 0.003, arch: 0.012, start: 0.02, end: 0.008 },
+    laces: { rows: 7, w: 0.016, d: 0.003, arch: 0.012, start: 0.02, end: 0.008, bow: { loop: 0.075, tail: 0.1, drop: 0.11 } },
     sole: {
       height: [[0, 0.15], [0.35, 0.13], [0.7, 0.095], [1, 0.085]],
       layers: [
@@ -325,7 +325,7 @@ export const MODELS = {
     collarPad: 0.005, collarFront: -0.006, collarOut: 0.3,
     eyestay: { w: 0.03 },
     tongue: { wide: 0.03, rise: 0.035, back: 0.005, lift: 0.004, d: 0.005, rim: 0.004 },
-    laces: { rows: 9, w: 0.016, d: 0.003, arch: 0.01, start: 0.015, end: 0.008, eyelets: 'metal' },
+    laces: { rows: 9, w: 0.016, d: 0.003, arch: 0.01, start: 0.015, end: 0.008, eyelets: 'metal', bow: { loop: 0.07, tail: 0.1, drop: 0.13 } },
     sole: {
       height: [[0, 0.088], [0.6, 0.085], [1, 0.085]],
       layers: VULC(0.011),
@@ -366,7 +366,7 @@ export const MODELS = {
     collarPad: 0.018, collarFront: -0.012, collarOut: 0.3,
     eyestay: { w: 0.045 },
     tongue: { wide: 0.03, rise: 0.06, back: 0.012, lift: 0.006, d: 0.01, rim: 0.01, tag: [0.03, 0.022] },
-    laces: { rows: 6, w: 0.016, d: 0.0035, arch: 0.012, start: 0.02, end: 0.008, eyelets: 'metal' },
+    laces: { rows: 6, w: 0.016, d: 0.0035, arch: 0.012, start: 0.02, end: 0.008, eyelets: 'metal', bow: { loop: 0.075, tail: 0.1, drop: 0.11 } },
     sole: {
       height: [[0, 0.088], [0.6, 0.084], [1, 0.084]],
       layers: VULC(0.011),
@@ -399,7 +399,7 @@ export const MODELS = {
     collarPad: 0.006, collarFront: -0.012,
     eyestay: { w: 0.03 },
     tongue: { wide: 0.024, rise: 0.05, back: 0.02, lift: 0.004, d: 0.005, rim: 0.004, tag: [0.026, 0.02] },
-    laces: { rows: 7, w: 0.014, d: 0.0028, arch: 0.009, start: 0.02, end: 0.008 },
+    laces: { rows: 7, w: 0.014, d: 0.0028, arch: 0.009, start: 0.02, end: 0.008, bow: { loop: 0.065, tail: 0.09, drop: 0.1 } },
     sole: { height: [[0, 0.036], [0.6, 0.03], [1, 0.03]], toeWrap: 0.03, layers: FLAT(0.008) },
     stripeAnchor: [0.47, 0.11],
     materials: { toe: 'suede', out: 'rubber' },
@@ -416,8 +416,8 @@ export const MODELS = {
       mudguard([[0.56, 0.004], [0.64, 0.03], [0.76, 0.045], [0.88, 0.06], [0.95, 0.09], [1, 0.2]], { role: 'toe', d: 0.0026 }),
       counter([[0, 0.23], [0.05, 0.17], [0.1, 0.11], [0.15, 0.05], [0.18, 0.004]]),
       // Crossing stripes: two thick S-curves
-      ribbon('stripe', [[0.24, 0.034], [0.32, 0.046], [0.4, 0.074], [0.46, 0.108], [0.51, 0.142], [0.56, 0.166]], [[0.24, 0.03], [0.4, 0.046], [0.56, 0.036]], 0.24, 0.56),
-      ribbon('stripe', [[0.37, 0.166], [0.42, 0.15], [0.48, 0.118], [0.54, 0.08], [0.6, 0.05], [0.67, 0.034]], [[0.37, 0.034], [0.5, 0.046], [0.67, 0.03]], 0.37, 0.67, { lift: 0.0048 }),
+      ribbon('stripe', [[0.22, 0.03], [0.32, 0.038], [0.4, 0.056], [0.46, 0.082], [0.51, 0.112], [0.55, 0.142], [0.585, 0.172]], [[0.22, 0.016], [0.32, 0.034], [0.45, 0.044], [0.58, 0.02]], 0.22, 0.58),
+      ribbon('stripe', [[0.36, 0.172], [0.39, 0.142], [0.43, 0.112], [0.48, 0.082], [0.54, 0.056], [0.61, 0.038], [0.69, 0.03]], [[0.36, 0.018], [0.48, 0.044], [0.6, 0.034], [0.68, 0.016]], 0.36, 0.68, { lift: 0.0048 }),
       heelTab(0.018, 0.2, { taper: 0.1 }),
     ],
   },

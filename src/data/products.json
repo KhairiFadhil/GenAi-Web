@@ -10,11 +10,26 @@
     "condition": "BNIB",
     "color": "White",
     "description": "The clean all-white icon. Crisp leather upper, perforated toe box and the classic Air cushioning that started it all.",
-    "model3D": "/models/nike-af1.glb",
-    "images": ["/img/products/af1-1.webp"],
+    "model3D": {
+      "stripe": "swoosh",
+      "sole": 1,
+      "colors": {
+        "base": "#f4f3ef",
+        "panel": "#f4f3ef",
+        "stripe": "#f4f3ef",
+        "sole": "#f6f5f2",
+        "out": "#ecebe6",
+        "lace": "#f4f3ef",
+        "thread": "#d9d6cf",
+        "lining": "#e9e7e2"
+      }
+    },
+    "images": ["/img/products/af1-1.webp", "/img/products/af1-2.webp"],
     "hotspots": [
-      { "label": "Stitching", "description": "Upper stitching detail. Example information for the demo product.", "position": [0.1, 0.05, 0.2] },
-      { "label": "Sole", "description": "Cupsole with Air unit. Example information for the demo product.", "position": [0, -0.08, 0] }
+      { "at": "toe", "label": "Perforated toe", "description": "Rows of punched holes keep air moving through the toe box." },
+      { "at": "stitching", "label": "Stitching", "description": "Double-stitched leather overlays along the mudguard." },
+      { "at": "sole", "label": "Cupsole", "description": "Stitched rubber cupsole with an encapsulated Air unit in the heel." },
+      { "at": "heel", "label": "Heel counter", "description": "Firm leather counter that locks the heel in place." }
     ]
   },
   {
@@ -28,10 +43,26 @@
     "condition": "BNIB",
     "color": "Red / White / Black",
     "description": "The colorway that defined a generation. Premium leather in the original 1985 red, white and black blocking.",
-    "model3D": "/models/nike-aj1.glb",
-    "images": ["/img/products/aj1-1.webp"],
+    "model3D": {
+      "stripe": "swoosh",
+      "sole": 0.8,
+      "colors": {
+        "base": "#f3f1ec",
+        "panel": "#c41230",
+        "stripe": "#141414",
+        "sole": "#f3f1ec",
+        "out": "#c41230",
+        "lace": "#f3f1ec",
+        "thread": "#f3f1ec",
+        "lining": "#2a2a2c"
+      }
+    },
+    "images": ["/img/products/aj1-1.webp", "/img/products/aj1-2.webp"],
     "hotspots": [
-      { "label": "Wings Logo", "description": "Embossed collar logo. Example information for the demo product.", "position": [0, 0.15, -0.1] }
+      { "at": "stripe", "label": "Side panel", "description": "Contrast leather overlay sweeping from heel to toe." },
+      { "at": "collar", "label": "Padded collar", "description": "Foam-padded collar in contrast leather." },
+      { "at": "tongue", "label": "Tongue tag", "description": "Woven tag stitched to a nylon tongue." },
+      { "at": "toe", "label": "Toe box", "description": "Perforated toe cap in the colorway accent." }
     ]
   },
   {
@@ -45,11 +76,26 @@
     "condition": "BNIB",
     "color": "White / Black / Gum",
     "description": "Terrace classic turned street staple. Soft leather upper, suede T-toe overlay and a gum rubber outsole.",
-    "model3D": "/models/adidas-samba.glb",
-    "images": ["/img/products/samba-1.webp"],
+    "model3D": {
+      "stripe": "three",
+      "sole": 0.6,
+      "perf": false,
+      "colors": {
+        "base": "#f3f1ec",
+        "panel": "#e2dfd8",
+        "stripe": "#151515",
+        "sole": "#c58b52",
+        "out": "#a8703d",
+        "lace": "#f3f1ec",
+        "thread": "#e9e6df",
+        "lining": "#ece9e3"
+      }
+    },
+    "images": ["/img/products/samba-1.webp", "/img/products/samba-2.webp"],
     "hotspots": [
-      { "label": "T-Toe", "description": "Suede T-toe overlay. Example information for the demo product.", "position": [0.15, 0, 0] },
-      { "label": "Gum Sole", "description": "Gum rubber outsole. Example information for the demo product.", "position": [0, -0.08, 0] }
+      { "at": "stripe", "label": "Side stripes", "description": "Three serrated leather stripes on each side." },
+      { "at": "toe", "label": "T-toe overlay", "description": "Suede overlay that reinforces the toe." },
+      { "at": "sole", "label": "Gum outsole", "description": "Natural gum rubber with a pivot point for grip." }
     ]
   },
   {
@@ -63,9 +109,27 @@
     "condition": "Pre-Owned",
     "color": "White / Core Black",
     "description": "Primeknit upper in the zebra pattern over full-length Boost cushioning. Lightly worn, cleaned and checked.",
-    "model3D": null,
-    "images": ["/img/products/yeezy-1.webp"],
-    "hotspots": []
+    "model3D": {
+      "stripe": "line",
+      "sole": 1.25,
+      "perf": false,
+      "colors": {
+        "base": "#ecebe7",
+        "panel": "#e2e1dd",
+        "stripe": "#1c1c1c",
+        "sole": "#f1f0ec",
+        "out": "#deddd8",
+        "lace": "#ecebe7",
+        "thread": "#2a2a2a",
+        "lining": "#ecebe7"
+      }
+    },
+    "images": ["/img/products/yeezy-1.webp", "/img/products/yeezy-2.webp"],
+    "hotspots": [
+      { "at": "stripe", "label": "Side stripe", "description": "Monofilament stripe woven into the knit upper." },
+      { "at": "sole", "label": "Cushioning", "description": "Full-length cushioned midsole inside a rubber cage." },
+      { "at": "laces", "label": "Lacing", "description": "Flat laces through a reinforced eyestay." }
+    ]
   },
   {
     "id": "ORI-NB-550-001",
@@ -78,10 +142,26 @@
     "condition": "BNIB",
     "color": "White / Green",
     "description": "A 1989 basketball silhouette brought back for the street. Leather upper with green accents and a chunky cupsole.",
-    "model3D": "/models/nb-550.glb",
-    "images": ["/img/products/550-1.webp"],
+    "model3D": {
+      "stripe": "n",
+      "sole": 1.05,
+      "colors": {
+        "base": "#f4f2ee",
+        "panel": "#e9e9e5",
+        "stripe": "#1e5b3c",
+        "sole": "#efe8da",
+        "out": "#1e5b3c",
+        "lace": "#f4f2ee",
+        "thread": "#d9d6cf",
+        "lining": "#1e5b3c"
+      }
+    },
+    "images": ["/img/products/550-1.webp", "/img/products/550-2.webp"],
     "hotspots": [
-      { "label": "N Logo", "description": "Side panel N logo. Example information for the demo product.", "position": [0, 0.03, 0.12] }
+      { "at": "stripe", "label": "N logo", "description": "Leather N stitched onto the side panel." },
+      { "at": "toe", "label": "Perforated toe", "description": "Perforations on the toe for breathability." },
+      { "at": "sole", "label": "Cupsole", "description": "Chunky rubber cupsole from the 1989 basketball original." },
+      { "at": "collar", "label": "Collar", "description": "Padded collar with a contrast lining." }
     ]
   },
   {
@@ -95,9 +175,27 @@
     "condition": "BNIB",
     "color": "Grey",
     "description": "The dad shoe, perfected. Pigskin suede and mesh in signature grey with FuelCell cushioning.",
-    "model3D": null,
-    "images": ["/img/products/990-1.webp"],
-    "hotspots": []
+    "model3D": {
+      "stripe": "n",
+      "sole": 1.3,
+      "perf": false,
+      "colors": {
+        "base": "#9c9ea2",
+        "panel": "#7f8287",
+        "stripe": "#d4d6d9",
+        "sole": "#d9dadc",
+        "out": "#4f5256",
+        "lace": "#9c9ea2",
+        "thread": "#7f8287",
+        "lining": "#8c8f94"
+      }
+    },
+    "images": ["/img/products/990-1.webp", "/img/products/990-2.webp"],
+    "hotspots": [
+      { "at": "stripe", "label": "N logo", "description": "Reflective N on the lateral panel." },
+      { "at": "sole", "label": "Midsole", "description": "Dual-density midsole for all-day cushioning." },
+      { "at": "heel", "label": "Heel counter", "description": "Moulded counter for heel stability." }
+    ]
   },
   {
     "id": "ORI-CV-CHK-001",
@@ -110,9 +208,27 @@
     "condition": "BNIB",
     "color": "Black",
     "description": "Heavier canvas, cushioned insole and vintage details. The archive version of an all-time classic.",
-    "model3D": null,
-    "images": ["/img/products/chuck70-1.webp"],
-    "hotspots": []
+    "model3D": {
+      "stripe": "none",
+      "sole": 0.9,
+      "perf": false,
+      "colors": {
+        "base": "#191919",
+        "panel": "#191919",
+        "stripe": "#191919",
+        "sole": "#efe6cf",
+        "out": "#efe6cf",
+        "lace": "#1d1d1d",
+        "thread": "#2e2e2e",
+        "lining": "#efe6cf"
+      }
+    },
+    "images": ["/img/products/chuck70-1.webp", "/img/products/chuck70-2.webp"],
+    "hotspots": [
+      { "at": "toe", "label": "Toe cap", "description": "Rubber toe cap bonded to heavy canvas." },
+      { "at": "sole", "label": "Vulcanised sidewall", "description": "Glossy egret sidewall with a contrast foxing line." },
+      { "at": "laces", "label": "Eyelets", "description": "Metal eyelets on a double-stitched eyestay." }
+    ]
   },
   {
     "id": "ORI-VN-OSK-001",
@@ -125,9 +241,27 @@
     "condition": "BNIB",
     "color": "Black / White",
     "description": "Suede and canvas skate shoe with the iconic side stripe and waffle outsole.",
-    "model3D": null,
-    "images": ["/img/products/oldskool-1.webp"],
-    "hotspots": []
+    "model3D": {
+      "stripe": "jazz",
+      "sole": 0.85,
+      "perf": false,
+      "colors": {
+        "base": "#161616",
+        "panel": "#202020",
+        "stripe": "#f2f1ed",
+        "sole": "#f3f2ee",
+        "out": "#2b2b2b",
+        "lace": "#161616",
+        "thread": "#f2f1ed",
+        "lining": "#161616"
+      }
+    },
+    "images": ["/img/products/oldskool-1.webp", "/img/products/oldskool-2.webp"],
+    "hotspots": [
+      { "at": "stripe", "label": "Side stripe", "description": "Leather side stripe stitched to the suede and canvas upper." },
+      { "at": "toe", "label": "Toe cap", "description": "Suede toe cap for skate durability." },
+      { "at": "sole", "label": "Waffle sole", "description": "Vulcanised rubber sidewall over a waffle outsole." }
+    ]
   },
   {
     "id": "ORI-OT-M66-001",
@@ -140,9 +274,27 @@
     "condition": "BNIB",
     "color": "Yellow / Black",
     "description": "Slim 1966 silhouette in bold yellow with black Tiger stripes. Lightweight and low to the ground.",
-    "model3D": null,
-    "images": ["/img/products/mexico66-1.webp"],
-    "hotspots": []
+    "model3D": {
+      "stripe": "tiger",
+      "sole": 0.55,
+      "perf": false,
+      "colors": {
+        "base": "#e9b414",
+        "panel": "#e9b414",
+        "stripe": "#151515",
+        "sole": "#f0ebdd",
+        "out": "#bf8e55",
+        "lace": "#e9b414",
+        "thread": "#151515",
+        "lining": "#f0ebdd"
+      }
+    },
+    "images": ["/img/products/mexico66-1.webp", "/img/products/mexico66-2.webp"],
+    "hotspots": [
+      { "at": "stripe", "label": "Side stripes", "description": "Crossed stripes stitched onto the leather upper." },
+      { "at": "sole", "label": "Low-profile sole", "description": "Thin rubber sole that keeps you close to the ground." },
+      { "at": "heel", "label": "Heel tab", "description": "Contrast heel tab with a stitched cross." }
+    ]
   },
   {
     "id": "ORI-ES-HOD-001",
@@ -156,8 +308,9 @@
     "color": "Dark Oatmeal",
     "description": "Relaxed, heavyweight fleece hoodie with rubberized chest logo and dropped shoulders.",
     "model3D": null,
-    "images": ["/img/products/essentials-hoodie-1.webp"],
-    "hotspots": []
+    "images": ["/img/products/essentials-hoodie-1.svg"],
+    "hotspots": [],
+    "swatch": "#b8ac96"
   },
   {
     "id": "ORI-ST-TEE-001",
@@ -171,7 +324,8 @@
     "color": "Black",
     "description": "Cotton tee with the signature script logo. A streetwear basic since the 80s.",
     "model3D": null,
-    "images": ["/img/products/stussy-tee-1.webp"],
-    "hotspots": []
+    "images": ["/img/products/stussy-tee-1.svg"],
+    "hotspots": [],
+    "swatch": "#2a2a2c"
   }
 ]

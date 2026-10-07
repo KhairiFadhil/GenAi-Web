@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ORI — Product shot renderer</title>
+    <style>
+      body { margin: 0; background: #0a0a0a; color: #f5f5f5; font: 13px/1.4 system-ui, sans-serif; padding: 24px; }
+      #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+      figure { margin: 0; } img { width: 100%; display: block; } figcaption { color: #8a8a8a; margin-top: 4px; }
+      button { font: inherit; padding: 8px 14px; background: #f5f5f5; color: #0a0a0a; border: 0; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <strong>Dev-only.</strong> Renders every procedural product to <code>public/img/products/*.webp</code>.
+    <button id="download" hidden>Download all</button>
+    <div id="grid"></div>
+    <script type="module" src="/src/tools/render.js"></script>
+  </body>
+</html>

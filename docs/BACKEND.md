@@ -5,7 +5,7 @@
 | Bagian | Pilihan | Alasan |
 |---|---|---|
 | Hosting web + API | Vercel (Hobby), fungsi di region **Singapura** (`sin1`) | Satu deploy untuk frontend dan API, HTTPS otomatis |
-| Database | **Neon Postgres** lewat Vercel Marketplace, region **Singapura** | Postgres asli, gratis, dibuat langsung dari dashboard Vercel, variabel koneksi terisi otomatis |
+| Database | **Neon Postgres** (akun Neon sendiri, gratis), region **Singapura** | Postgres asli, tidak terikat akun Vercel siapa pun, cukup satu connection string |
 | Driver | `postgres` (postgres.js) lewat koneksi *pooled* | Cocok untuk serverless, tidak terkunci ke satu penyedia |
 
 Tanpa database pun situs tetap jalan (mode lokal): stok dari `products.json`, order disimpan di sesi browser. Begitu `DATABASE_URL` terpasang, semua otomatis pindah ke database.
@@ -39,15 +39,18 @@ Browser ──► Vercel CDN (React build)
 | POST | `/api/verify` | Catat pengecekan kode, kembalikan jumlah cek dan tanggal cek pertama |
 | POST | `/api/newsletter` | Daftar newsletter (aman diulang) |
 
-## Setup (±10 menit, dilakukan pemilik project Vercel)
+## Setup (±10 menit)
 
-1. **Buat database.** Vercel → project ORI → tab **Storage** → **Create Database** → **Neon** → region **Singapore (aws-ap-southeast-1)** → hubungkan ke environment Production, Preview, dan Development. Vercel otomatis menambahkan `DATABASE_URL`.
-2. **Isi tabel dan produk.** Di laptop, di folder repo:
-   - Salin connection string *pooled* dari Neon (tombol **Open in Neon** → **Connect**), lalu buat file `.env.local` berisi `DATABASE_URL=...` (contoh di `.env.example`; file ini tidak ikut ter-commit).
-   - Jalankan `npm run db:setup`. Hasilnya: `schema applied, 11 products seeded`.
-   - Alternatif tanpa terminal: buka **SQL Editor** di Neon, jalankan isi `db/schema.sql` lalu `db/seed.sql`.
-3. **Redeploy** di Vercel (Deployments → Redeploy).
-4. **Cek.** Buka `https://<domain>/api/health`, harus muncul `"database":"connected"`.
+Database dibuat terpisah di Neon, jadi tidak memakai akun Vercel pribadi siapa pun. Project Vercel tempat situs di-deploy (milik Khairi) hanya perlu diisi satu environment variable.
+
+1. **Buat database.** Daftar gratis di [neon.tech](https://neon.tech) (bisa login GitHub/Google) → **New project** → region **AWS Asia Pacific 1 (Singapore)**.
+2. **Salin connection string.** Dashboard Neon → **Connect** → aktifkan **Connection pooling** → salin string `postgresql://…-pooler…`.
+3. **Isi tabel dan produk.** Di laptop, di folder repo, buat file `.env.local` berisi `DATABASE_URL=<string tadi>` (contoh di `.env.example`; file ini tidak ikut ter-commit), lalu jalankan `npm run db:setup`. Hasilnya: `schema applied, 11 products seeded`.
+   Alternatif tanpa terminal: buka **SQL Editor** di Neon, jalankan isi `db/schema.sql` lalu `db/seed.sql`.
+4. **Sambungkan ke situs.** Di project Vercel tempat situs di-deploy: **Settings → Environment Variables** → tambah `DATABASE_URL` dengan string yang sama (Production + Preview) → **Deployments → Redeploy**.
+5. **Cek.** Buka `https://<domain>/api/health`, harus muncul `"database":"connected"`.
+
+Connection string adalah kunci database: simpan hanya di `.env.local` dan di environment variable Vercel, jangan dikirim lewat chat atau di-commit.
 
 ## Keamanan
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { brands, products, useCart, useWishlist } from '../store.js'
+import { brands, products, useAccount, useCart, useWishlist } from '../store.js'
 import { Close, Menu } from './Icons.jsx'
 import SizeGuide from './SizeGuide.jsx'
 
@@ -41,6 +41,7 @@ function Count({ n }) {
 export default function Navbar() {
   const [cart] = useCart()
   const [wishlist] = useWishlist()
+  const account = useAccount()
   const [open, setOpen] = useState(false)
   const [menu, setMenu] = useState(null)
   const [atTop, setAtTop] = useState(true)
@@ -90,6 +91,8 @@ export default function Navbar() {
 
           <div className="nav-icons" onMouseEnter={hover(null)}>
             <NavLink to="/collection" className="nav-text hide-sm" end>Search</NavLink>
+            {account?.role === 'admin' && <NavLink to="/admin" className="nav-text hide-sm">Admin</NavLink>}
+            <NavLink to={account ? '/account' : '/login'} className="nav-text hide-sm">{account ? 'Account' : 'Log in'}</NavLink>
             <NavLink to="/wishlist" className="nav-text hide-sm" aria-label={`Wishlist, ${wishlist.length} items`}>Wishlist <Count n={wishlist.length} /></NavLink>
             <NavLink to="/cart" className="nav-text" aria-label={`Bag, ${count} items`}>Bag <Count n={count} /></NavLink>
             <button className="icon-btn menu-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="mobile-menu" aria-label={open ? 'Close menu' : 'Open menu'}>
@@ -117,6 +120,8 @@ export default function Navbar() {
           <Link to="/#brands">Brands</Link>
           <Link to="/verify">Verify</Link>
           <Link to="/wishlist">Wishlist</Link>
+          <Link to={account ? '/account' : '/login'}>{account ? 'Account' : 'Log in'}</Link>
+          {account?.role === 'admin' && <Link to="/admin">Admin</Link>}
           <button onClick={openGuide}>Size guide</button>
           <span className="label">ORI · Originals, up close</span>
         </nav>

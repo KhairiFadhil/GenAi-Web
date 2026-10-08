@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from 'react'
+import { lazy, Suspense, useEffect, useReducer } from 'react'
 import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
 import Toaster from './components/Toaster.jsx'
@@ -10,8 +10,12 @@ import Wishlist from './pages/Wishlist.jsx'
 import Cart from './pages/Cart.jsx'
 import Checkout from './pages/Checkout.jsx'
 import OrderSuccess from './pages/OrderSuccess.jsx'
+import Login from './pages/Login.jsx'
+import Account from './pages/Account.jsx'
 import { api } from './api.js'
 import { brands, syncInventory, toast, useStoredState } from './store.js'
+
+const AdminApp = lazy(() => import('./admin/AdminApp.jsx'))
 
 const LOCALES = ['ID / IDR', 'EN / IDR']
 const INFO = [
@@ -23,10 +27,10 @@ const FOOT_LINKS = [
   ['Shop', [['All products', '/collection'], ['Sneakers', '/collection?category=Sneakers'], ['Apparel', '/collection?category=Apparel'], ['In 3D', '/collection?3d=1']]],
   ['Brands', brands.slice(0, 5).map((b) => [b, `/collection?brand=${encodeURIComponent(b)}`])],
   ['ORI', [['Verify a product', '/verify'], ['3D brand shelf', '/#brands']]],
-  ['Your order', [['Bag', '/cart'], ['Wishlist', '/wishlist'], ['Latest order', '/order']]],
+  ['Your order', [['Account', '/account'], ['Bag', '/cart'], ['Wishlist', '/wishlist'], ['Latest order', '/order']]],
 ]
 
-const TITLES = { '/collection': 'Collection', '/verify': 'Verify', '/wishlist': 'Wishlist', '/cart': 'Cart', '/checkout': 'Checkout', '/order': 'Order confirmed' }
+const TITLES = { '/login': 'Sign in', '/account': 'Account', '/admin': 'Admin', '/collection': 'Collection', '/verify': 'Verify', '/wishlist': 'Wishlist', '/cart': 'Cart', '/checkout': 'Checkout', '/order': 'Order confirmed' }
 
 function NotFound() {
   return (
@@ -75,6 +79,16 @@ export default function App() {
     document.title = TITLES[base] ? `${TITLES[base]} — ORI` : 'ORI — Originals, Up Close'
   }, [pathname])
 
+  // The admin dashboard is its own full-screen app (no store navbar/footer)
+  if (pathname.startsWith('/admin')) {
+    return (
+      <Suspense fallback={null}>
+        <Routes><Route path="/admin/*" element={<AdminApp />} /></Routes>
+        <Toaster />
+      </Suspense>
+    )
+  }
+
   return (
     <>
       <a className="skip" href="#main">Skip to content</a>
@@ -91,6 +105,8 @@ export default function App() {
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/order" element={<OrderSuccess />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/account" element={<Account />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>

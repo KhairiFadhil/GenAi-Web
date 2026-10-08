@@ -52,6 +52,18 @@ Database dibuat terpisah di Neon, jadi tidak memakai akun Vercel pribadi siapa p
 
 Connection string adalah kunci database: simpan hanya di `.env.local` dan di environment variable Vercel, jangan dikirim lewat chat atau di-commit.
 
+## Database di VPS (Docker)
+
+Alternatif Neon: Postgres 16 jalan di VPS sendiri lewat `docker-compose.yml`.
+
+1. Di VPS: `cp .env.example .env`, isi `POSTGRES_PASSWORD` dan `ORI_API_PASSWORD` (huruf/angka acak panjang, misalnya `openssl rand -hex 24`).
+2. `docker compose up -d`. Start pertama otomatis menjalankan `schema.sql`, `seed.sql`, `demo.sql`, lalu mengaktifkan login `ori_api`.
+3. Aplikasi memakai `DATABASE_URL=postgresql://ori_api:<ORI_API_PASSWORD>@127.0.0.1:5432/ori`. Port database hanya terbuka untuk VPS itu sendiri, tidak ke internet.
+
+Data dummy (`db/demo.sql`): 36 pesanan 30 hari terakhir, 18 pendaftar newsletter, 140 pengecekan verifikasi. Nomor pesanan dummy berakhiran `-S0001` dst. Aman diulang: `DATABASE_URL=postgresql://ori:<POSTGRES_PASSWORD>@127.0.0.1:5432/ori npm run db:demo` hanya mengganti pesanan dummy, pesanan asli dan stok tidak disentuh.
+
+Catatan: script init Docker hanya jalan saat volume masih kosong. Untuk mulai dari nol: `docker compose down -v && docker compose up -d` (semua data terhapus).
+
 ## Keamanan
 
 - Kunci database hanya di environment variable server, tidak pernah dikirim ke browser.

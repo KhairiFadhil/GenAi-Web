@@ -40,6 +40,9 @@ export const route = (fn) => async (request) => {
   } catch (e) {
     if (e instanceof HttpError) return json({ error: e.message, ...e.extra }, e.status)
     if (BAD_INPUT.has(e.code)) return json({ error: 'invalid_input', reason: e.code === '22023' ? e.message : undefined }, 400)
+    if (e.code === '28000') return json({ error: 'unauthorized' }, 401) // no valid session
+    if (e.code === '42501') return json({ error: 'forbidden' }, 403) // not an admin
+    if (e.code === 'P0002') return json({ error: 'not_found' }, 404)
     console.error(e)
     return json({ error: 'server_error' }, 500)
   }

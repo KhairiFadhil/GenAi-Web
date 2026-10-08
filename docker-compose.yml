@@ -1,0 +1,27 @@
+# Postgres for the VPS. The first start (empty volume) creates the schema, seeds products and demo data,
+# and enables the ori_api login. Setup: cp .env.example .env, set both passwords, docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ori
+      POSTGRES_USER: ori
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      ORI_API_PASSWORD: ${ORI_API_PASSWORD:?set ORI_API_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5432:5432" # reachable from the VPS itself only, never the internet
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - ./db/demo.sql:/docker-entrypoint-initdb.d/03-demo.sql:ro
+      - ./db/api-login.sh:/docker-entrypoint-initdb.d/04-api-login.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ori -d ori"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

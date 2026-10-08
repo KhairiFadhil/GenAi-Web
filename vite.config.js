@@ -11,7 +11,7 @@ function apiRoutes() {
     if (!url.pathname.startsWith('/api/')) return next()
     const name = url.pathname.slice(5).replace(/\/$/, '')
     const file = path.join(process.cwd(), 'api', `${name}.js`)
-    if (!/^[a-z-]+$/.test(name) || !fs.existsSync(file)) return (res.statusCode = 404), res.end()
+    if (!/^[a-z-]+(\/[a-z-]+)?$/.test(name) || !fs.existsSync(file)) return (res.statusCode = 404), res.end() // _lib is never reachable
     const handler = (await load(file))[req.method]
     if (!handler) return (res.statusCode = 405), res.end()
     const chunks = []
@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
   Object.assign(process.env, loadEnv(mode, process.cwd(), '')) // server-only vars for /api
   return {
     plugins: [react(), apiRoutes()],
-    preview: { headers },
+    preview: { headers, allowedHosts: ['ori.kalri.fun'] }, // production runs `vite preview` behind nginx
     // three.js + AO (~1.1 MB) is a lazy chunk
     build: { chunkSizeWarningLimit: 1200 },
   }

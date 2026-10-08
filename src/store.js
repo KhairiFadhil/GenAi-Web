@@ -97,3 +97,35 @@ export const orderNumber = () => {
   const d = new Date(), pad = (n) => String(n).padStart(2, '0')
   return `ORI-${String(d.getFullYear()).slice(2)}${pad(d.getMonth() + 1)}${pad(d.getDate())}-` + Math.random().toString(36).slice(2, 7).toUpperCase().padEnd(5, '0')
 }
+
+// Signed-in account shared across the app: undefined while loading, null when signed out
+// (or when there is no database: accounts need the backend).
+let account
+let loading
+export function refreshAccount() {
+  loading = api('auth/me').then((r) => {
+    account = r.ok ? r.data.account : null
+    window.dispatchEvent(new Event('ori-auth'))
+    return account
+  })
+  return loading
+}
+export function setAccount(a) {
+  account = a
+  window.dispatchEvent(new Event('ori-auth'))
+}
+export function useAccount() {
+  const [a, setA] = useState(account)
+  useEffect(() => {
+    const on = () => setA(account)
+    window.addEventListener('ori-auth', on)
+    if (account === undefined && !loading) refreshAccount()
+    else on()
+    return () => window.removeEventListener('ori-auth', on)
+  }, [])
+  return a
+}
+export async function logout() {
+  await api('auth/logout', { body: {} })
+  setAccount(null)
+}

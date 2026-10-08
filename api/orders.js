@@ -1,4 +1,5 @@
 import { EMAIL, HttpError, json, readJson, route } from './_lib/http.js'
+import { sessionHash } from './_lib/auth.js'
 
 const ID = /^ORI-[A-Z0-9]+(-[A-Z0-9]+)+$/
 const PAYMENTS = new Set(['card', 'ewallet', 'transfer'])
@@ -36,5 +37,7 @@ export const POST = route(async (request, sql) => {
     items: body.items.map(({ id, size, qty }) => ({ id, size, qty })),
   }
   const [{ result }] = await sql`select api_place_order(${sql.json(order)}::jsonb) as result`
+  const session = sessionHash(request)
+  if (session && result.number) await sql`select api_order_link(${result.number}, ${session})` // show it in the account
   return json(result, result.error === 'out_of_stock' ? 409 : 201)
 })

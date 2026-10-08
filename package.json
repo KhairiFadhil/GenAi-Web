@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "db:setup": "node scripts/db.mjs setup",
+    "db:demo": "node scripts/db.mjs demo",
+    "db:admin": "node scripts/db.mjs admin",
     "db:seed-sql": "node scripts/db.mjs seed-sql"
   },
   "dependencies": {

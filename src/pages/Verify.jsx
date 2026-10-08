@@ -55,7 +55,10 @@ export default function Verify() {
         <div className="cert fail" role="alert">
           <p className="bad">✕ PRODUCT NOT FOUND</p>
           <p>The verification code <span className="mono">{normalized}</span> isn't registered with ORI. Check the code on the tag and try again.</p>
-          <Link className="btn" to="/collection">Browse collection</Link>
+          <div className="row">
+            <Link className="btn primary" to={`/account?report=verification&code=${encodeURIComponent(normalized)}&subject=${encodeURIComponent('Code not found: ' + normalized)}`}>Report this code</Link>
+            <Link className="btn" to="/collection">Browse collection</Link>
+          </div>
         </div>
       ))}
 

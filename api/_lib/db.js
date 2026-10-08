@@ -11,7 +11,7 @@ export function db() {
     max: 1,
     idle_timeout: 20,
     connect_timeout: 8,
-    ssl: /@(localhost|127\.0\.0\.1)[:/]/.test(url) ? false : 'require',
+    ssl: /@(localhost|127\.0\.0\.1)[:/]|sslmode=disable/.test(url) ? false : 'require', // no TLS for local/private-network DBs
   })
   return client
 }

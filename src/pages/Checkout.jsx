@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { api } from '../api.js'
-import { applyInventory, cartTotal, findProduct, orderNumber, useCart, useOrder } from '../store.js'
+import { applyInventory, cartTotal, findProduct, orderNumber, useAccount, useCart, useOrder } from '../store.js'
 import { OrderSummary } from './Cart.jsx'
 
 const PAYMENTS = [
@@ -13,6 +13,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
 export default function Checkout() {
   const [cart, setCart] = useCart()
+  const account = useAccount() // prefill contact details when signed in
   const [, setOrder] = useOrder()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
@@ -78,9 +79,9 @@ export default function Checkout() {
       <div className="cart-layout">
         <form className="stack" onSubmit={submit}>
           <div className="label">Contact</div>
-          <label>Full name<input name="name" required minLength={2} maxLength={80} autoComplete="name" placeholder="Your name" /></label>
+          <label>Full name<input name="name" required minLength={2} maxLength={80} autoComplete="name" placeholder="Your name" defaultValue={account?.name} key={account?.email} /></label>
           <div className="two">
-            <label>Email<input name="email" type="email" required maxLength={120} autoComplete="email" placeholder="you@example.com" /></label>
+            <label>Email<input name="email" type="email" required maxLength={120} autoComplete="email" placeholder="you@example.com" defaultValue={account?.email} key={account?.email} /></label>
             <label><span>Phone <span className="hint">(optional)</span></span><input name="phone" type="tel" maxLength={20} autoComplete="tel" placeholder="08xx xxxx xxxx" /></label>
           </div>
           <div className="label form-section">Shipping</div>

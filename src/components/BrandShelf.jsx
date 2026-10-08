@@ -49,10 +49,12 @@ function Folded({ color }) {
 function Item({ item, hovered, setHover, onPick }) {
   const lift = useRef()
   const { product: p } = item
-  useFrame((_, dt) => {
+  useFrame((state, dt) => {
     const g = lift.current, k = 1 - Math.exp(-dt * 9)
-    g.position.y += ((hovered ? 0.07 : 0) - g.position.y) * k
-    g.rotation.y += ((hovered ? 0.45 : 0) - g.rotation.y) * k
+    const dy = (hovered ? 0.07 : 0) - g.position.y, dr = (hovered ? 0.45 : 0) - g.rotation.y
+    g.position.y += dy * k
+    g.rotation.y += dr * k
+    if (Math.abs(dy) + Math.abs(dr) > 1e-4) state.invalidate()
   })
   return (
     <group position={[item.x, item.y, 0.08]} rotation-y={item.turn}>
@@ -120,10 +122,12 @@ function Wall({ L }) {
 function Env() {
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
+  const invalidate = useThree((s) => s.invalidate)
   useEffect(() => {
     scene.environment = roomEnvironment(gl)
     scene.environmentIntensity = 0.45
-  }, [gl, scene])
+    invalidate()
+  }, [gl, scene, invalidate])
   return null
 }
 
@@ -149,12 +153,21 @@ function Rig({ L, focus, controls, wall }) {
   }, [focus, L, aspect, controls])
 
   // Gentle parallax toward the pointer
+  const gl = useThree((s) => s.gl)
+  const invalidate = useThree((s) => s.invalidate)
+  useEffect(() => {
+    const el = gl.domElement
+    el.addEventListener('pointermove', invalidate)
+    return () => el.removeEventListener('pointermove', invalidate)
+  }, [gl, invalidate])
   useFrame((state, dt) => {
     const g = wall.current
     if (!g || reducedMotion()) return
     const k = 1 - Math.exp(-dt * 3), still = focus != null ? 0.4 : 1
-    g.rotation.y += (state.pointer.x * 0.05 * still - g.rotation.y) * k
-    g.rotation.x += (-state.pointer.y * 0.025 * still - g.rotation.x) * k
+    const dy = state.pointer.x * 0.05 * still - g.rotation.y, dx = -state.pointer.y * 0.025 * still - g.rotation.x
+    g.rotation.y += dy * k
+    g.rotation.x += dx * k
+    if (Math.abs(dy) + Math.abs(dx) > 1e-4) state.invalidate()
   })
   return <CameraControls ref={controls} mouseButtons={NONE} touches={NO_TOUCH} smoothTime={0.55} />
 }
@@ -198,8 +211,8 @@ export default function BrandShelf({ onSelect }) {
   return (
     <div className={`shelf ${focus != null ? 'focused' : ''}`} ref={box}>
       <Canvas
-        dpr={[1, 1.75]}
-        frameloop={visible ? 'always' : 'never'}
+        dpr={[1, 1.5]}
+        frameloop={visible ? 'demand' : 'never'}
         camera={{ fov: FOV, position: [0, 0, 12], near: 0.1, far: 60 }}
         onPointerMissed={() => focus != null && setFocus(null)}
       >

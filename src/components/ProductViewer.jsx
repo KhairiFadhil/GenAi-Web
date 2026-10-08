@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, useGLTF, useProgress } from '@react-three/drei'
+import { BakeShadows, OrbitControls, useGLTF, useProgress } from '@react-three/drei'
 import { Box3, MathUtils, Spherical, Vector3 } from 'three'
 import { shoeAnchors } from '../three/shoe.js'
 import { PinLayer, Pins, ProceduralShoe, Studio, StudioEffects } from './SceneKit.jsx'
@@ -37,6 +37,7 @@ function GltfModel({ url }) {
 function Rig({ api, autoRotate, onUserStart }) {
   const controls = useRef()
   const camera = useThree((s) => s.camera)
+  const invalidate = useThree((s) => s.invalidate)
   const flight = useRef(null)
 
   useEffect(() => {
@@ -51,6 +52,7 @@ function Rig({ api, autoRotate, onUserStart }) {
         let dTheta = end.s.theta - from.s.theta
         dTheta = Math.atan2(Math.sin(dTheta), Math.cos(dTheta))
         flight.current = { from, end, dTheta, t: reducedMotion() ? 1 : 0 }
+        invalidate() // demand frameloop: kick the first frame; controls' change events keep it going
       },
       zoom(f) {
         const c = controls.current
@@ -58,9 +60,13 @@ function Rig({ api, autoRotate, onUserStart }) {
         this.fly(c.target.clone().add(offset).toArray(), c.target.toArray())
       },
     }
-  }, [api, camera])
+  }, [api, camera, invalidate])
 
-  useFrame((_, dt) => {
+  // Auto-rotate only advances inside a frame, so keep requesting frames while it is on
+  useEffect(() => { if (autoRotate) invalidate() }, [autoRotate, invalidate])
+
+  useFrame((state, dt) => {
+    if (autoRotate) state.invalidate()
     const f = flight.current, c = controls.current
     if (!f || !c) return
     f.t = Math.min(1, f.t + dt / 0.9)
@@ -149,13 +155,16 @@ export default function ProductViewer({ product: p }) {
       <div className="viewer">
         <Canvas
           shadows="percentage"
-          dpr={[1, window.innerWidth < 720 ? 1.5 : 2]}
+          frameloop="demand"
+          dpr={[1, 1.5]}
           camera={{ position: VIEWS['3/4'], fov: 30, near: 0.01, far: 50 }}
           aria-label={`Interactive 3D model of ${p.name}`}
         >
           <Studio />
           <Suspense fallback={null}>
             {procedural ? <ProceduralShoe spec={p.model3D} /> : <GltfModel url={p.model3D} />}
+            {/* Shoe and lights never move, only the camera: draw the 2048² shadow map once */}
+            <BakeShadows />
           </Suspense>
           <Rig api={api} autoRotate={spin} onUserStart={stop} />
           <PinLayer pins={pins} nodes={pinEls} />

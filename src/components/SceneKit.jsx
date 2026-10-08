@@ -11,14 +11,16 @@ import { createStudio, roomEnvironment, studioBackdrop } from '../three/studio.j
 export function Studio({ intensity = 0.6, shadows = true, backdrop = true }) {
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
+  const invalidate = useThree((s) => s.invalidate)
   const rig = useMemo(() => createStudio({ shadows }), [shadows])
   useEffect(() => {
     scene.environment = roomEnvironment(gl)
     scene.environmentIntensity = intensity
     if (backdrop) scene.background = studioBackdrop()
     gl.toneMappingExposure = 0.82
+    invalidate()
     return () => { scene.environment = null; scene.background = null }
-  }, [gl, scene, intensity, backdrop])
+  }, [gl, scene, intensity, backdrop, invalidate])
   return <primitive object={rig} />
 }
 
@@ -28,6 +30,7 @@ export function StudioEffects({ quality = 'Medium' }) {
   const scene = useThree((s) => s.scene)
   const camera = useThree((s) => s.camera)
   const size = useThree((s) => s.size)
+  const invalidate = useThree((s) => s.invalidate)
   const composer = useMemo(() => {
     const c = new EffectComposer(gl, new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4 }))
     const ao = new N8AOPass(scene, camera, 1, 1)
@@ -40,7 +43,8 @@ export function StudioEffects({ quality = 'Medium' }) {
   useEffect(() => {
     composer.setPixelRatio(gl.getPixelRatio())
     composer.setSize(size.width, size.height)
-  }, [composer, gl, size])
+    invalidate()
+  }, [composer, gl, size, invalidate])
   useEffect(() => () => composer.dispose(), [composer])
   useFrame(() => composer.render(), 1)
   return null

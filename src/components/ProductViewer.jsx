@@ -14,6 +14,7 @@ const VIEWS = {
 }
 const MIN = 0.45, MAX = 4
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const coarse = window.matchMedia('(pointer: coarse)').matches
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
 
 // Any GLB, scaled to the procedural shoe's footprint
@@ -158,6 +159,7 @@ export default function ProductViewer({ product: p }) {
           frameloop="demand"
           dpr={[1, 1.5]}
           camera={{ position: VIEWS['3/4'], fov: 30, near: 0.01, far: 50 }}
+          role="img"
           aria-label={`Interactive 3D model of ${p.name}`}
         >
           <Studio />
@@ -187,7 +189,7 @@ export default function ProductViewer({ product: p }) {
           ))}
         </Pins>
 
-        {!touched && <p className="viewer-hint">Drag to rotate · Scroll or pinch to zoom</p>}
+        {!touched && <p className="viewer-hint">{coarse ? 'Drag to rotate · Pinch to zoom' : 'Drag to rotate · Scroll to zoom'}</p>}
         {!procedural && <GltfProgress />}
 
         {hotspot && (

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import '@fontsource-variable/archivo/wdth.css'
-import '@fontsource-variable/inter'
+import '@fontsource-variable/host-grotesk'
 import '@fontsource-variable/jetbrains-mono'
 import products from '../data/products.json'
 import { createShoe } from '../three/shoe.js'
@@ -70,7 +70,7 @@ function shot(view) {
 
 await document.fonts.load('900 104px "Archivo Variable"')
 await document.fonts.load('500 20px "JetBrains Mono Variable"')
-await document.fonts.load('400 24px "Inter Variable"')
+await document.fonts.load('400 24px "Host Grotesk Variable"')
 
 const shots = {}
 const grid = document.getElementById('grid')
@@ -120,7 +120,7 @@ if (!only) {
   g.strokeStyle = '#f5f5f5'
   g.strokeText('UP CLOSE.', 60, 316)
   g.fillStyle = '#8a8a8a'
-  g.font = '400 24px "Inter Variable", system-ui, sans-serif'
+  g.font = '400 24px "Host Grotesk Variable", system-ui, sans-serif'
   g.fontStretch = 'normal'
   g.fillText('Explore · Inspect · Verify · Buy', 64, 400)
   g.fillStyle = '#f5f5f5'

@@ -100,7 +100,7 @@ export default function Home() {
             </form>
           </div>
           <div className="qr-tile">
-            <QRCodeSVG value={verifyUrl('ORI-NK-AF1-001')} size={128} bgColor="#F5F5F5" fgColor="#0A0A0A" />
+            <QRCodeSVG value={verifyUrl('ORI-NK-AF1-001')} title="QR code: verify Air Force 1 '07 White" size={128} bgColor="#F5F5F5" fgColor="#0A0A0A" />
             <span className="label">Scan with your phone</span>
           </div>
         </div>

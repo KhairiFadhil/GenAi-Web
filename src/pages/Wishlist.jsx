@@ -31,7 +31,7 @@ export default function Wishlist() {
   if (!items.length) {
     return (
       <div className="page empty">
-        <div className="glyph" aria-hidden="true">♡</div>
+        <div className="glyph" data-glyph="♡" aria-hidden="true" />
         <h1>Your wishlist is empty</h1>
         <p>Tap the heart on any product to save it here.</p>
         <Link className="btn primary" to="/collection">Explore collection</Link>
@@ -44,6 +44,7 @@ export default function Wishlist() {
       <div className="page-head">
         <div><div className="label">Saved · {items.length} {items.length === 1 ? 'item' : 'items'}</div><h1>My wishlist</h1></div>
       </div>
+      <h2 className="sr-only">Saved products</h2>
       <div className="grid">
         {items.map((p) => (
           <ProductCard key={p.id} product={p}>

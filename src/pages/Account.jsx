@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { Search, Truck } from '../components/Icons.jsx'
@@ -64,9 +64,63 @@ function ReportForm({ orders, preset, onDone }) {
   )
 }
 
-function Tracking({ t }) {
+// Visual "live" route from the warehouse to the customer's city. Position = elapsed share of the
+// shipping window (shipped -> ETA), nudged forward every few seconds; real GPS would come from a courier API.
+const STOPS = [[0.36, 'Sorting center'], [0.72, 'Destination hub']]
+function LiveRoute({ t, city }) {
+  const path = useRef()
+  const [now, setNow] = useState(Date.now())
+  const [pt, setPt] = useState(null)
+  useEffect(() => {
+    if (t.stage !== 'in_transit') return
+    const id = setInterval(() => setNow(Date.now()), 4000)
+    return () => clearInterval(id)
+  }, [t.stage])
+  const start = t.events.find((e) => /^Handed to/.test(e.text))?.at ?? t.events.at(-1).at
+  const progress = t.stage === 'delivered' ? 1 : Math.min(0.94, Math.max(0.06, (now - start) / ((t.eta ?? now) - start)))
+  useEffect(() => {
+    const el = path.current
+    if (!el) return
+    const at = (f) => el.getPointAtLength(el.getTotalLength() * f)
+    setPt({ truck: at(progress), stops: STOPS.map(([f]) => at(f)) })
+  }, [progress])
+  const len = 1000
+  return (
+    <figure className={`live-route ${t.stage}`} aria-label={`Shipment ${Math.round(progress * 100)}% of the way to ${city}`}>
+      <svg viewBox="0 0 600 150" role="img">
+        <defs>
+          <pattern id="lr-grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="currentColor" strokeOpacity="0.06" /></pattern>
+        </defs>
+        <rect width="600" height="150" fill="url(#lr-grid)" />
+        <path ref={path} d="M40 110 C 160 20, 260 140, 330 80 S 500 30, 560 60" pathLength={len} className="lr-base" />
+        <path d="M40 110 C 160 20, 260 140, 330 80 S 500 30, 560 60" pathLength={len} className="lr-done" strokeDasharray={`${progress * len} ${len}`} />
+        {pt && STOPS.map(([f, label], i) => (
+          <circle key={label} r="5" cx={pt.stops[i].x} cy={pt.stops[i].y} className={progress >= f ? 'lr-stop done' : 'lr-stop'} />
+        ))}
+        <circle cx="40" cy="110" r="7" className="lr-end" />
+        <circle cx="560" cy="60" r="7" className="lr-end dest" />
+        {pt && (
+          <g className="lr-truck" style={{ transform: `translate(${pt.truck.x}px, ${pt.truck.y}px)` }}>
+            {t.stage === 'in_transit' && <circle r="16" className="lr-pulse" />}
+            <circle r="11" className="lr-badge" />
+            <path d="M-6 -3h7v6h-7zM1 -1h3l2 2v2h-5" className="lr-icon" />
+          </g>
+        )}
+        <text x="40" y="136" className="lr-label">Jakarta</text>
+        <text x="560" y="92" textAnchor="end" className="lr-label">{city}</text>
+      </svg>
+      <figcaption>
+        <span className="label">{t.stage === 'delivered' ? 'Delivered' : 'Live tracking'}</span>
+        <span>{t.stage === 'delivered' ? `Arrived in ${city}` : `${Math.round(progress * 100)}% of the way · ETA ${date(t.eta)}`}</span>
+      </figcaption>
+    </figure>
+  )
+}
+
+function Tracking({ t, city }) {
   return (
     <div className="tracking">
+      {(t.stage === 'in_transit' || t.stage === 'delivered') && <LiveRoute t={t} city={city} />}
       <div className="tracking-head">
         {t.courier ? (
           <span><span className="label">Courier</span> {t.courier} · <span className="label">Waybill</span> <span className="mono">{t.waybill}</span></span>
@@ -141,14 +195,71 @@ function OrderCard({ order, onReport }) {
         <div className="ocard-actions">
           <span className="small">{note}</span>
           <div className="row">
+            {t.stage === 'pending' && <Link className="btn primary" to={`/pay/${order.number}`}>Pay now</Link>}
             {(t.stage === 'delivered' || t.stage === 'cancelled') && <button className="btn primary" onClick={buyAgain}>Buy again</button>}
             {canTrack && <button className="btn" onClick={() => setOpen((o) => !o)} aria-expanded={open}>{open ? 'Hide tracking' : 'Track order'}</button>}
             <button className="btn" onClick={() => onReport(order.number)}>Report a problem</button>
           </div>
         </div>
-        {open && <Tracking t={t} />}
+        {open && <Tracking t={t} city={order.city} />}
       </div>
     </article>
+  )
+}
+
+// Support ticket: replies from ORI support also arrive by email
+function TicketCard({ r, startOpen, onChanged }) {
+  const [open, setOpen] = useState(startOpen)
+  const [thread, setThread] = useState(null)
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const load = () => api(`account/thread?id=${r.id}`).then((x) => x.ok && setThread(x.data))
+  useEffect(() => { if (open) load() }, [open])
+
+  const send = async (e) => {
+    e.preventDefault()
+    setBusy(true)
+    const x = await api('account/thread', { body: { id: r.id, body: text } })
+    setBusy(false)
+    if (!x.ok) return toast('Could not send. Try again.')
+    setText('')
+    toast('Sent to ORI support')
+    load()
+    onChanged()
+  }
+
+  return (
+    <li className={`acc-card ticket ${open ? 'open' : ''}`}>
+      <button className="ticket-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className="ticket-title">
+          {r.unread > 0 && !open && <span className="ticket-dot" aria-label={`${r.unread} new`} />}
+          <strong>{r.subject}</strong>
+        </span>
+        <span className="status" data-status={r.status}>{REPORT_LABEL[r.status]}</span>
+      </button>
+      <p className="small">#{r.id} · {TOPICS.find(([v]) => v === r.type)?.[1]} · {date(r.created_at)}{r.order_number ? ` · ${r.order_number}` : ''}{r.product_code ? ` · ${r.product_code}` : ''}</p>
+      {!open && r.last && <p className="ticket-preview">{r.last.author === 'admin' ? 'ORI support: ' : 'You: '}{r.last.body}</p>}
+      {open && (
+        <div className="ticket-body">
+          {!thread ? <p className="muted">Loading…</p> : (
+            <ol className="ticket-history">
+              {thread.messages.map((m) => (
+                <li key={m.id} className={m.author}>
+                  <div className="ticket-meta"><strong>{m.author === 'admin' ? `${m.author_name ?? 'ORI'} · ORI support` : 'You'}</strong><span className="small">{dateTime(m.at)}</span></div>
+                  <p>{m.body}</p>
+                </li>
+              ))}
+            </ol>
+          )}
+          <form className="ticket-reply" onSubmit={send}>
+            <label className="sr-only" htmlFor={`reply-${r.id}`}>Reply</label>
+            <textarea id={`reply-${r.id}`} rows={2} maxLength={2000} value={text} onChange={(e) => setText(e.target.value)} placeholder="Add more details for our team" />
+            <button className="btn" disabled={busy || !text.trim()}>{busy ? 'Sending…' : 'Send'}</button>
+          </form>
+          <p className="small">Replies from ORI support are also sent to your email.</p>
+        </div>
+      )}
+    </li>
   )
 }
 
@@ -161,7 +272,7 @@ export default function Account() {
   const [failed, setFailed] = useState(false)
   const [q, setQ] = useState('')
   const preset = { type: params.get('report'), code: params.get('code'), order: params.get('order'), subject: params.get('subject') }
-  const view = params.get('view') === 'support' || preset.type ? 'support' : 'orders'
+  const view = params.get('view') === 'support' || preset.type || params.get('thread') ? 'support' : 'orders'
   const tab = STAGES.some(([k]) => k === params.get('tab')) ? params.get('tab') : 'all'
   const [showForm, setShowForm] = useState(!!preset.type)
 
@@ -192,6 +303,7 @@ export default function Account() {
     navigate('/', { replace: true })
   }
   const openReports = (reports ?? []).filter((r) => r.status === 'open' || r.status === 'in_progress').length
+  const unread = (reports ?? []).reduce((n, r) => n + (r.unread ?? 0), 0)
 
   return (
     <div className="page account">
@@ -205,7 +317,7 @@ export default function Account() {
         </div>
         <nav className="acc-nav" aria-label="Account">
           <button aria-current={view === 'orders'} onClick={() => go({})}>My orders <span className="count">{orders?.length ?? 0}</span></button>
-          <button aria-current={view === 'support'} onClick={() => go({ view: 'support' })}>Support {openReports > 0 && <span className="count">{openReports}</span>}</button>
+          <button aria-current={view === 'support'} onClick={() => go({ view: 'support' })}>Support {unread > 0 ? <span className="count new">{unread} new</span> : openReports > 0 && <span className="count">{openReports}</span>}</button>
           <Link to="/wishlist">Wishlist</Link>
           {account.role === 'admin' && <Link to="/admin">Admin dashboard</Link>}
           <button onClick={signOut}>Log out</button>
@@ -249,17 +361,7 @@ export default function Account() {
               <div className="notice">No reports yet. Problem with an order, or a code that doesn't verify? Send us a report.</div>
             ) : (
               <ul className="acc-list">
-                {reports.map((r) => (
-                  <li key={r.id} className="acc-card">
-                    <div className="acc-card-head">
-                      <strong>{r.subject}</strong>
-                      <span className="status" data-status={r.status}>{REPORT_LABEL[r.status]}</span>
-                    </div>
-                    <p className="small">{TOPICS.find(([v]) => v === r.type)?.[1]} · {date(r.created_at)}{r.order_number ? ` · ${r.order_number}` : ''}{r.product_code ? ` · ${r.product_code}` : ''}</p>
-                    <p>{r.message}</p>
-                    {r.admin_note && <div className="reply"><span className="label">ORI support</span><p>{r.admin_note}</p></div>}
-                  </li>
-                ))}
+                {reports.map((r) => <TicketCard key={r.id} r={r} startOpen={String(r.id) === params.get('thread')} onChanged={load} />)}
               </ul>
             )}
           </>

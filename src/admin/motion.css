@@ -1,0 +1,19 @@
+/* Admin page transitions: each route fades/slides in, its top-level blocks follow in a short stagger */
+/* fill-mode backwards, never both: a transform animation that stays applied turns these wrappers into the containing block for position:fixed overlays (drawers/sheets) */
+.admin .adm-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-content: start; min-width: 0; animation: adm-page-in 0.28s var(--ease) backwards; }
+.admin .adm-page > * { animation: adm-page-in 0.32s var(--ease) backwards; }
+.admin .adm-page > :nth-child(2) { animation-delay: 40ms; }
+.admin .adm-page > :nth-child(3) { animation-delay: 80ms; }
+.admin .adm-page > :nth-child(n + 4) { animation-delay: 120ms; }
+/* Overlays/dialogs mounted inside a page animate themselves (and a transform here would fight theirs) */
+.admin .adm-page > :is(dialog, .or-sheet-wrap, .adm-drawer-wrap) { animation: none; }
+.admin .adm-page .adm-tiles > * { animation: adm-page-in 0.35s var(--ease) backwards; }
+.admin .adm-page .adm-tiles > :nth-child(2) { animation-delay: 30ms; }
+.admin .adm-page .adm-tiles > :nth-child(3) { animation-delay: 60ms; }
+.admin .adm-page .adm-tiles > :nth-child(4) { animation-delay: 90ms; }
+.admin .adm-page .adm-tiles > :nth-child(n + 5) { animation-delay: 120ms; }
+.admin .adm-nav a { transition: color 0.15s, background 0.15s, box-shadow 0.25s; }
+@keyframes adm-page-in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) {
+  .admin .adm-page, .admin .adm-page > *, .admin .adm-page .adm-tiles > * { animation: none; }
+}

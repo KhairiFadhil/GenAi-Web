@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { brands, products, useAccount, useCart, useWishlist } from '../store.js'
+import { brands, listed, products, useAccount, useCart, useWishlist } from '../store.js'
 import { Close, Menu } from './Icons.jsx'
 import SizeGuide from './SizeGuide.jsx'
 
-const brandsIn = (category) => brands.filter((b) => products.some((p) => p.brand === b && p.category === category))
+const brandsIn = (category) => brands.filter((b) => products.some((p) => listed(p) && p.brand === b && p.category === category))
 const toBrand = (b) => [b, `/collection?brand=${encodeURIComponent(b)}`]
 
 const ANNOUNCE = 'Free shipping on every order · Every pair carries an ORI ID'
 
-// Mega-menu columns: [heading, [[label, to], ...]]
-const MENUS = {
+// Mega-menu columns: [heading, [[label, to], ...]], rebuilt from the live catalog
+const menus = () => ({
   Collection: [
     ['Highlights', [['All products', '/collection'], ['In 3D', '/collection?3d=1'], ['Brand new in box', '/collection?condition=BNIB'], ['Pre-owned', '/collection?condition=Pre-Owned']]],
     ['Sneakers', [['All sneakers', '/collection?category=Sneakers'], ...brandsIn('Sneakers').map(toBrand)]],
@@ -20,7 +20,7 @@ const MENUS = {
     ['All brands', brands.map(toBrand)],
     ['Explore', [['3D brand shelf', '/#brands'], ['Verify a product', '/verify']]],
   ],
-}
+})
 
 // Count chip that bumps whenever n grows
 function Count({ n }) {
@@ -39,6 +39,7 @@ function Count({ n }) {
 }
 
 export default function Navbar() {
+  const MENUS = menus()
   const [cart] = useCart()
   const [wishlist] = useWishlist()
   const account = useAccount()

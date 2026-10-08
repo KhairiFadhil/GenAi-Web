@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import ErrorBoundary from '../components/ErrorBoundary.jsx'
 import ProductCard from '../components/ProductCard.jsx'
 import { verifyUrl } from '../components/VerificationCard.jsx'
-import { brands, has3D, products } from '../store.js'
+import { brands, has3D, listed, products as all } from '../store.js'
 import { hasWebGL } from '../webgl.js'
 
 const BrandShelf = lazy(() => import('../components/BrandShelf.jsx'))
@@ -31,6 +31,7 @@ function ShelfFallback({ message }) {
 export default function Home() {
   const navigate = useNavigate()
   const [code, setCode] = useState('')
+  const products = all.filter(listed)
   const featured = products.filter(has3D).slice(0, 4)
 
   return (

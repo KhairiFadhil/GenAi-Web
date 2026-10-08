@@ -12,6 +12,7 @@ import Checkout from './pages/Checkout.jsx'
 import OrderSuccess from './pages/OrderSuccess.jsx'
 import Login from './pages/Login.jsx'
 import Account from './pages/Account.jsx'
+import Pay from './pages/Pay.jsx'
 import { api } from './api.js'
 import { brands, syncInventory, toast, useStoredState } from './store.js'
 
@@ -23,14 +24,14 @@ const INFO = [
   ['ORI verified', 'Every pair carries an ORI product ID you can check online or by QR code.'],
   ['Explore in 3D', 'Rotate, zoom and inspect the details of every sneaker before you buy.'],
 ]
-const FOOT_LINKS = [
+const footLinks = () => [
   ['Shop', [['All products', '/collection'], ['Sneakers', '/collection?category=Sneakers'], ['Apparel', '/collection?category=Apparel'], ['In 3D', '/collection?3d=1']]],
   ['Brands', brands.slice(0, 5).map((b) => [b, `/collection?brand=${encodeURIComponent(b)}`])],
   ['ORI', [['Verify a product', '/verify'], ['3D brand shelf', '/#brands']]],
   ['Your order', [['Account', '/account'], ['Bag', '/cart'], ['Wishlist', '/wishlist'], ['Latest order', '/order']]],
 ]
 
-const TITLES = { '/login': 'Sign in', '/account': 'Account', '/admin': 'Admin', '/collection': 'Collection', '/verify': 'Verify', '/wishlist': 'Wishlist', '/cart': 'Cart', '/checkout': 'Checkout', '/order': 'Order confirmed' }
+const TITLES = { '/pay': 'Payment', '/login': 'Sign in', '/account': 'Account', '/admin': 'Admin', '/collection': 'Collection', '/verify': 'Verify', '/wishlist': 'Wishlist', '/cart': 'Cart', '/checkout': 'Checkout', '/order': 'Order confirmed' }
 
 function NotFound() {
   return (
@@ -107,6 +108,7 @@ export default function App() {
             <Route path="/order" element={<OrderSuccess />} />
             <Route path="/login" element={<Login />} />
             <Route path="/account" element={<Account />} />
+            <Route path="/pay/:number" element={<Pay />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
@@ -117,7 +119,7 @@ export default function App() {
         </div>
         <div className="foot-main">
           <div className="foot-cols">
-            {FOOT_LINKS.map(([title, links]) => (
+            {footLinks().map(([title, links]) => (
               <div key={title}>
                 <strong>{title}</strong>
                 <ul>{links.map(([label, to]) => <li key={label}><Link to={to}>{label}</Link></li>)}</ul>

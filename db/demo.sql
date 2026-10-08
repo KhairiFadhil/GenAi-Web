@@ -137,6 +137,27 @@ begin
   ) as r(mine, src_ord, type, subject, message, ord, code, status, note, age)
   left join lateral (select o.email from orders o where o.number like '%-S' || r.src_ord) src on true;
 
+  -- Support threads: earlier replies become admin chat messages, plus a few customer follow-ups
+  insert into report_messages (report_id, author, author_name, body, created_at)
+  select r.id, 'admin', 'ORI Support', r.admin_note, r.updated_at from reports r
+  where r.email like '%@example.com' and r.admin_note is not null;
+  insert into report_messages (report_id, author, author_name, body, created_at)
+  select r.id, 'customer', coalesce(a.name, split_part(r.email, '@', 1)), x.body, r.updated_at + x.after
+  from reports r
+  left join accounts a on a.id = r.account_id
+  join (values ('Size advice for Samba OG', 'Thanks! I will order EU 42 then.', interval '2 hours'),
+               ('Verification shows a different colorway', 'Here is a photo of the box label, it says 2025 batch.', interval '1 hour'),
+               ('Change shipping address', 'Great, thank you for the quick help.', interval '30 minutes')) as x(subject, body, after)
+    on x.subject = r.subject
+  where r.email like '%@example.com';
+  update reports r set
+    admin_note = null,
+    last_message_at = coalesce((select max(m.created_at) from report_messages m where m.report_id = r.id), r.created_at),
+    admin_seen_at = case when r.status in ('resolved', 'closed') then now() end,
+    customer_seen_at = case when r.status in ('resolved', 'closed') then now() end
+  where r.email like '%@example.com';
+  update accounts set last_login_at = now() - random() * interval '10 days' where email like '%@example.com';
+
   -- Newsletter: 18 sign-ups (existing emails are left alone)
   for i in 1..18 loop
     insert into newsletter_subscribers (email, created_at)

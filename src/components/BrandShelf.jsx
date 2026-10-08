@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { CameraControls, RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
-import { brands, products, rupiah } from '../store.js'
+import { brands, catalogVersion, listed, products, rupiah } from '../store.js'
 import { contactShadowTexture, radialTexture, roomEnvironment } from '../three/studio.js'
 import { PinLayer, Pins, ProceduralShoe } from './SceneKit.jsx'
 
@@ -20,7 +20,7 @@ function layout(aspect) {
   const cells = brands.map((brand, i) => {
     const c = i % cols, r = Math.floor(i / cols)
     const x = (c - (cols - 1) / 2) * pw, y = ((rows - 1) / 2 - r) * ph
-    const list = products.filter((p) => p.brand === brand)
+    const list = products.filter((p) => listed(p) && p.brand === brand)
     const items = list.map((p, j) => ({
       product: p,
       cell: i,
@@ -181,7 +181,7 @@ export default function BrandShelf({ onSelect }) {
   const [focus, setFocus] = useState(null)
   const [hover, setHover] = useState(null)
   const [visible, setVisible] = useState(true)
-  const L = useMemo(() => layout(aspect), [aspect])
+  const L = useMemo(() => layout(aspect), [aspect, catalogVersion])
 
   useEffect(() => {
     const el = box.current

@@ -763,6 +763,97 @@ tbody tr:hover { background: var(--surface); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+/* ── Payment (simulated) ── */
+.pay-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: clamp(20px, 3vw, 40px); align-items: start; }
+.pay-timer { display: grid; justify-items: end; gap: 4px; padding: 10px 14px; border: 1px solid rgb(240 198 116 / 0.4); border-radius: 8px; color: #f0c674; font-size: 20px; }
+.pay-main { display: grid; gap: 16px; min-width: 0; }
+.pay-methods { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.pay-methods button {
+  display: grid; gap: 4px; text-align: left; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+  color: var(--text); cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+.pay-methods button:hover { border-color: var(--line-strong); }
+.pay-methods button:active { transform: scale(0.98); }
+.pay-methods button[aria-selected='true'] { border-color: var(--ok); background: rgb(126 231 135 / 0.06); box-shadow: inset 0 0 0 1px var(--ok); }
+.pay-methods strong { font-size: 14px; }
+.pay-panel { padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); animation: pay-in 0.35s var(--ease); }
+@keyframes pay-in { from { opacity: 0; transform: translateY(6px); } }
+.pay-qr { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; }
+.pay-qr h3 { margin: 0 0 8px; font-size: 18px; }
+.qr-box { position: relative; padding: 14px; background: #f5f5f5; border-radius: 12px; line-height: 0; box-shadow: 0 0 0 6px rgb(126 231 135 / 0.08); }
+.qr-logo { position: absolute; left: 50%; top: 50%; translate: -50% -50%; padding: 4px 8px; border-radius: 6px; background: #0a0a0a; color: #f5f5f5; font-family: var(--display); font-weight: 800; font-size: 11px; letter-spacing: 0.12em; line-height: 1.2; }
+.pay-steps { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 6px; color: var(--muted); font-size: 14px; }
+.pay-steps b { color: var(--text); }
+.pay-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.pay-pills button { padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 999px; background: none; color: var(--text); cursor: pointer; font-size: 13px; transition: background 0.2s, border-color 0.2s; }
+.pay-pills button[aria-checked='true'] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.pay-va { display: grid; gap: 12px; }
+.va-box { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; padding: 14px 16px; border: 1px dashed var(--line-strong); border-radius: 10px; background: var(--bg); }
+.va-box .label { grid-column: 1 / -1; }
+.va-num { font-size: clamp(18px, 2.4vw, 24px); letter-spacing: 0.06em; overflow-wrap: anywhere; }
+.pay-copy { padding: 7px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: none; color: var(--text); cursor: pointer; font-size: 12px; white-space: nowrap; transition: border-color 0.2s, background 0.2s; }
+.pay-copy:hover { border-color: var(--text); }
+.pay-card { display: grid; gap: 16px; }
+.pay-cardface {
+  display: grid; gap: 18px; width: min(340px, 100%); aspect-ratio: 1.6; padding: 20px; border-radius: 14px; align-content: space-between;
+  background: linear-gradient(135deg, #2b2b2e, #141416 60%), var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 20px 40px rgb(0 0 0 / 0.45);
+  font-size: 12px; letter-spacing: 0.1em; color: var(--muted);
+}
+.pay-cardface .num { font-size: clamp(16px, 2.6vw, 20px); color: var(--text); letter-spacing: 0.14em; }
+.pay-cardface .row-between { display: flex; justify-content: space-between; gap: 12px; }
+.chip-shape { width: 38px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #d9c27a, #9c8442); }
+.pay-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pay-fields label { display: grid; gap: 6px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.pay-fields .wide { grid-column: 1 / -1; }
+.pay-fields input { border-radius: 8px; font-family: var(--body); font-size: 15px; letter-spacing: 0.04em; text-transform: none; }
+.pay-go { min-height: 52px; font-size: 13px; border-radius: 8px; }
+.pay-note { margin: 0; text-align: center; }
+.pay-summary { border-radius: 12px; }
+@media (max-width: 900px) {
+  .pay-layout { grid-template-columns: minmax(0, 1fr); }
+  .pay-summary { order: -1; position: static; }
+  .pay-methods { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .pay-qr { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .pay-steps { text-align: left; }
+  .pay-fields { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── Live route (visual tracking) ── */
+.live-route { margin: 0 0 16px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg); color: var(--text); }
+.live-route svg { display: block; width: 100%; height: auto; }
+.lr-base { fill: none; stroke: var(--line-strong); stroke-width: 2.5; stroke-dasharray: 6 8; }
+.lr-done { fill: none; stroke: var(--ok); stroke-width: 3; stroke-linecap: round; transition: stroke-dasharray 1.2s var(--ease); }
+.lr-end { fill: var(--surface-2); stroke: var(--line-strong); stroke-width: 2; }
+.lr-end.dest { stroke: var(--ok); }
+.lr-stop { fill: var(--surface-2); stroke: var(--line-strong); stroke-width: 2; transition: fill 0.4s, stroke 0.4s; }
+.lr-stop.done { fill: var(--ok); stroke: var(--ok); }
+.lr-truck { transition: transform 1.2s var(--ease); }
+.lr-badge { fill: var(--ok); }
+.lr-icon { fill: none; stroke: #0a0a0a; stroke-width: 1.6; stroke-linejoin: round; }
+.lr-pulse { fill: rgb(126 231 135 / 0.25); animation: lr-pulse 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes lr-pulse { from { transform: scale(0.6); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
+.lr-label { fill: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.live-route figcaption { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 13px; }
+
+/* ── Support tickets ── */
+.ticket { transition: border-color 0.2s; }
+.ticket.open { border-color: var(--line-strong); }
+.ticket-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; padding: 0; border: 0; background: none; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+.ticket-title { display: inline-flex; align-items: center; gap: 8px; }
+.ticket-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px rgb(126 231 135 / 0.15); }
+.ticket-preview { color: var(--muted); font-size: 14px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.ticket-body { display: grid; gap: 12px; animation: pay-in 0.3s var(--ease); }
+.ticket-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ticket-history li { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
+.ticket-history li.admin { border-color: rgb(126 231 135 / 0.35); background: rgb(126 231 135 / 0.05); }
+.ticket-history p { margin: 6px 0 0; white-space: pre-wrap; }
+.ticket-meta { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.ticket-reply { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.ticket-reply textarea { border-radius: 8px; resize: vertical; }
+.acc-nav .count.new { background: var(--ok); color: #0a0a0a; border-color: var(--ok); width: auto; padding: 0 6px; }
+
 @media print {
   .nav, .footer, .toasts, .no-print, .try, .history, form { display: none !important; }
   body { background: #fff; color: #000; }

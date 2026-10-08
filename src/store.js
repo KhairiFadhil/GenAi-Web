@@ -3,11 +3,19 @@ import products from './data/products.json'
 import { api } from './api.js'
 
 export { products }
-export const brands = [...new Set(products.map((p) => p.brand))]
-export const categories = [...new Set(products.map((p) => p.category))]
+// Hidden in the admin = not shown in listings (still resolvable by id for carts and past orders)
+export const listed = (p) => p.active !== false
 const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
 const sizeRank = (s) => (isNaN(s) ? 100 + SIZE_ORDER.indexOf(s) : Number(s))
-export const allSizes = [...new Set(products.flatMap((p) => p.sizes))].sort((a, b) => sizeRank(a) - sizeRank(b))
+// Live bindings: recomputed whenever the catalog changes, so importers always read current values
+export let brands, categories, allSizes
+function derive() {
+  const live = products.filter(listed)
+  brands = [...new Set(live.map((p) => p.brand))]
+  categories = [...new Set(live.map((p) => p.category))]
+  allSizes = [...new Set(live.flatMap((p) => p.sizes))].sort((a, b) => sizeRank(a) - sizeRank(b))
+}
+derive()
 export const has3D = (p) => !!p.model3D
 export const findProduct = (id) => products.find((p) => p.id === id?.trim().toUpperCase())
 export const rupiah = (n) =>
@@ -88,9 +96,29 @@ export function applyInventory(items = []) {
   window.dispatchEvent(new Event('ori-inventory'))
 }
 
+// Database catalog over the bundled one: live price/stock/visibility, admin-edited details,
+// and products created in the admin (their photos, 3D spec and hotspots come in `media`)
+const DETAILS = ['brand', 'name', 'category', 'condition', 'color', 'description', 'sizes', 'price', 'stock', 'active']
+export let catalogVersion = 0
+export function applyCatalog(items = []) {
+  for (const it of items) {
+    let p = products.find((x) => x.id === it.id)
+    if (!p) products.push((p = { id: it.id, images: [], model3D: null, hotspots: [] }))
+    for (const k of DETAILS) if (it[k] !== undefined && it[k] !== null) p[k] = it[k]
+    const m = it.media ?? {}
+    if (m.images?.length) p.images = m.images
+    if ('model3D' in m) p.model3D = m.model3D
+    if (m.hotspots) p.hotspots = m.hotspots
+    if (m.swatch) p.swatch = m.swatch
+  }
+  derive()
+  catalogVersion++
+  window.dispatchEvent(new Event('ori-inventory'))
+}
+
 export async function syncInventory() {
-  const r = await api('inventory')
-  if (r.ok) applyInventory(r.data.items)
+  const r = await api('catalog')
+  if (r.ok) applyCatalog(r.data.items)
 }
 
 export const orderNumber = () => {

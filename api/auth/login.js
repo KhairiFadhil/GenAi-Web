@@ -13,5 +13,6 @@ export const POST = route(async (request, sql) => {
   const ok = await verifyPassword(password, r.account?.hash) // unknown email still pays the hashing cost
   await sql`select api_auth_attempt(${email}, ${ok})`
   if (!ok) throw new HttpError(401, 'invalid_credentials')
+  if (r.account.disabled) throw new HttpError(403, 'account_disabled') // only revealed with the right password
   return startSession(sql, r.account)
 })

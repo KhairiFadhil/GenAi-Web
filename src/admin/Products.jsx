@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 import ProductImage from '../components/ProductImage.jsx'
 import { findProduct, rupiah, toast } from '../store.js'
+import ProductEditor from './ProductEditor.jsx'
 import { Gate, PageHead, useLoad, when } from './ui.jsx'
 
 const LOW = 3
@@ -19,9 +20,11 @@ const Pencil = () => (
   </svg>
 )
 
-function Thumb({ id }) {
-  const p = findProduct(id)
-  return <span className="pr-thumb">{p ? <ProductImage product={p} /> : <span className="img" />}</span>
+// Admin-uploaded cover first, then the catalog photo from products.json
+function Thumb({ row }) {
+  const cover = row.media?.images?.[0]
+  const p = findProduct(row.id)
+  return <span className="pr-thumb">{cover ? <img src={cover} alt="" /> : p ? <ProductImage product={p} /> : <span className="img" />}</span>
 }
 
 function Switch({ checked, onChange, disabled, label }) {
@@ -42,98 +45,11 @@ function StockMeter({ stock }) {
   )
 }
 
-// Edit price, stock and visibility of one product in a native <dialog>
-function EditDialog({ product, onClose, onSaved }) {
-  const ref = useRef()
-  const [price, setPrice] = useState(String(product.price))
-  const [stock, setStock] = useState(String(product.stock))
-  const [active, setActive] = useState(product.active)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    ref.current.showModal()
-  }, [])
-
-  const priceOk = /^\d+$/.test(price) && +price >= 1 && +price <= 1_000_000_000
-  const stockOk = /^\d+$/.test(stock) && +stock <= 100_000
-  const dirty = +price !== product.price || +stock !== product.stock || active !== product.active
-  const step = (d) => setStock((s) => String(Math.max(0, Math.min(100_000, (+s || 0) + d))))
-
-  const save = async (e) => {
-    e.preventDefault()
-    if (!priceOk || !stockOk || !dirty) return
-    setBusy(true)
-    setError(null)
-    const r = await api('admin/products', { body: { id: product.id, price: +price, stock: +stock, active } })
-    setBusy(false)
-    if (!r.ok) return setError(r.offline ? 'The database is not reachable.' : 'Could not save. Check the values and try again.')
-    onSaved({ ...product, ...r.data })
-    ref.current.close()
-  }
-
-  return (
-    <dialog ref={ref} className="pr-dialog" onClose={onClose} onClick={(e) => e.target === ref.current && ref.current.close()} aria-labelledby="pr-dialog-title">
-      <form onSubmit={save} noValidate>
-        <header className="pr-dialog-head">
-          <Thumb id={product.id} />
-          <div>
-            <div className="adm-label">{product.brand} · <span className="mono">{product.id}</span></div>
-            <h2 id="pr-dialog-title">{product.name}</h2>
-          </div>
-          <button type="button" className="pr-x" onClick={() => ref.current.close()} aria-label="Close">×</button>
-        </header>
-
-        <div className="pr-fields">
-          <label className="pr-field">
-            <span className="adm-label">Price</span>
-            <span className={`pr-affix ${priceOk ? '' : 'bad'}`}>
-              <span>Rp</span>
-              <input inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))} autoFocus aria-invalid={!priceOk} />
-            </span>
-            <span className={`pr-hint ${priceOk ? '' : 'adm-err'}`}>{priceOk ? rupiah(+price) : 'Enter a whole amount of at least Rp 1'}</span>
-          </label>
-
-          <label className="pr-field">
-            <span className="adm-label">Stock</span>
-            <span className={`pr-stepper ${stockOk ? '' : 'bad'}`}>
-              <button type="button" onClick={() => step(-1)} aria-label="Decrease stock">−</button>
-              <input inputMode="numeric" value={stock} onChange={(e) => setStock(e.target.value.replace(/\D/g, ''))} aria-invalid={!stockOk} />
-              <button type="button" onClick={() => step(1)} aria-label="Increase stock">+</button>
-            </span>
-            <span className={`pr-hint ${stockOk ? '' : 'adm-err'}`}>{!stockOk ? '0 – 100.000' : +stock === 0 ? 'Shows as sold out' : +stock <= LOW ? 'Low stock warning' : `${product.sold_30d} sold in the last 30 days`}</span>
-          </label>
-
-          <div className="pr-field pr-listed">
-            <div>
-              <span className="adm-label">Visible in store</span>
-              <span className="pr-hint">{active ? 'Customers can find and buy it' : 'Hidden from checkout'}</span>
-            </div>
-            <Switch checked={active} onChange={setActive} label="Visible in store" />
-          </div>
-        </div>
-
-        {error && <p className="pr-error" role="alert">{error}</p>}
-
-        <footer className="pr-dialog-foot">
-          <span className="adm-muted">Changes go live on the storefront immediately.</span>
-          <div className="adm-row">
-            <button type="button" className="adm-btn" onClick={() => ref.current.close()}>Cancel</button>
-            <button className="adm-btn primary" disabled={!dirty || !priceOk || !stockOk || busy}>
-              {busy ? <><span className="pr-spin" /> Saving</> : 'Save changes'}
-            </button>
-          </div>
-        </footer>
-      </form>
-    </dialog>
-  )
-}
-
 export default function Products() {
   const state = useLoad('admin/products')
   const [saved, setSaved] = useState({}) // rows updated since load, by id
   const [flash, setFlash] = useState(null)
-  const [editing, setEditing] = useState(null)
+  const [editing, setEditing] = useState(null) // null | 'new' | product row
   const [filter, setFilter] = useState('all')
   const [q, setQ] = useState('')
   const [toggling, setToggling] = useState(null)
@@ -170,6 +86,7 @@ export default function Products() {
         return (
           <>
             <PageHead title="Products" sub="Catalog · price & stock">
+              <button className="adm-btn primary pe-add" onClick={() => setEditing('new')}>+ Add product</button>
               <div className="pr-summary">
                 <span><b>{items.length}</b> products</span>
                 <span><b>{counts.listed}</b> listed</span>
@@ -200,7 +117,7 @@ export default function Products() {
               {shown.map((p, i) => (
                 <div key={p.id} className={`pr-row ${p.active ? '' : 'off'} ${flash === p.id ? 'flash' : ''}`} style={{ '--i': Math.min(i, 12) }}>
                   <div className="pr-product">
-                    <Thumb id={p.id} />
+                    <Thumb row={p} />
                     <div>
                       <Link className="pr-name" to={`/product/${p.id}`} target="_blank" rel="noreferrer">{p.name}</Link>
                       <div className="adm-muted">{p.brand} · <span className="mono">{p.id}</span></div>
@@ -224,10 +141,18 @@ export default function Products() {
             <p className="adm-muted adm-note pr-foot">Photos, 3D models and descriptions live in <span className="mono">products.json</span>. Price, stock and visibility apply to the storefront immediately.</p>
 
             {editing && (
-              <EditDialog
-                product={editing}
+              <ProductEditor
+                key={editing === 'new' ? 'new' : editing.id}
+                row={editing === 'new' ? null : editing}
+                brands={[...new Set(items.map((x) => x.brand))].sort()}
                 onClose={() => setEditing(null)}
-                onSaved={(n) => (apply(n), toast(`Saved ${n.name}`))}
+                onDone={(id, message) => {
+                  toast(message ?? (editing === 'new' ? `Created ${id}` : 'Product saved'))
+                  setSaved({})
+                  state.reload()
+                  setFlash(id)
+                  setTimeout(() => setFlash((f) => (f === id ? null : f)), 1200)
+                }}
               />
             )}
           </>

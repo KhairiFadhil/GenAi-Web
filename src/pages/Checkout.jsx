@@ -5,6 +5,7 @@ import { applyInventory, cartTotal, findProduct, orderNumber, useAccount, useCar
 import { OrderSummary } from './Cart.jsx'
 
 const PAYMENTS = [
+  ['qris', 'QRIS', 'Any banking or e-wallet app'],
   ['card', 'Credit or debit card', 'Visa · Mastercard'],
   ['ewallet', 'E-wallet', 'GoPay · OVO · DANA'],
   ['transfer', 'Bank transfer', 'Virtual account'],
@@ -51,7 +52,11 @@ export default function Checkout() {
 
     if (r.ok) {
       applyInventory(r.data.stock ?? [])
-      return finish({ number: r.data.number, total: r.data.total, items: r.data.items, name: form.name, city: form.city, payment, createdAt: Date.parse(r.data.created_at) || Date.now() })
+      // Next: pay (simulated), then the invoice. The email lets a guest reopen the bill.
+      placed.current = true
+      setOrder({ number: r.data.number, email: form.email, total: r.data.total, items: r.data.items, name: form.name, city: form.city, payment, createdAt: Date.parse(r.data.created_at) || Date.now() })
+      setCart([])
+      return navigate(`/pay/${r.data.number}`, { replace: true })
     }
     if (r.offline) {
       // No database: keep the order in this session

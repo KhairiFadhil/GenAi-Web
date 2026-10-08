@@ -1,4 +1,4 @@
-import { Link, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { logout, useAccount } from '../store.js'
 import Overview from './Overview.jsx'
 import Orders from './Orders.jsx'
@@ -7,6 +7,7 @@ import Reports from './Reports.jsx'
 import Verifications from './Verifications.jsx'
 import Customers from './Customers.jsx'
 import './admin.css'
+import './motion.css'
 
 const NAV = [
   ['/admin', 'Overview'],
@@ -20,6 +21,7 @@ const NAV = [
 export default function AdminApp() {
   const account = useAccount()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
 
   if (account === undefined) return <div className="admin adm-boot"><p className="adm-empty">Loading…</p></div>
   if (!account) return <Navigate to="/login?next=/admin" replace />
@@ -48,6 +50,8 @@ export default function AdminApp() {
         </div>
       </aside>
       <main className="adm-main">
+        {/* Keyed by path: each admin page animates in (query-string changes like ?number= don't) */}
+        <div className="adm-page" key={pathname}>
         <Routes>
           <Route index element={<Overview />} />
           <Route path="orders" element={<Orders />} />
@@ -57,6 +61,7 @@ export default function AdminApp() {
           <Route path="customers" element={<Customers />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
+        </div>
       </main>
     </div>
   )

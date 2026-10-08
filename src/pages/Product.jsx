@@ -7,7 +7,7 @@ import ProductCard from '../components/ProductCard.jsx'
 import ProductImage from '../components/ProductImage.jsx'
 import SizeGuide from '../components/SizeGuide.jsx'
 import { verifyUrl } from '../components/VerificationCard.jsx'
-import { addToCart, findProduct, has3D, products, rupiah, toast, toggleIn, useCart, useWishlist } from '../store.js'
+import { addToCart, findProduct, has3D, listed, products, rupiah, toast, toggleIn, useCart, useWishlist } from '../store.js'
 import { hasWebGL } from '../webgl.js'
 
 const ProductViewer = lazy(() => import('../components/ProductViewer.jsx'))
@@ -42,7 +42,9 @@ export default function Product() {
   const [cart, setCart] = useCart()
   const [wishlist, setWishlist] = useWishlist()
   const can3D = !!p && has3D(p) && hasWebGL()
-  const [tab, setTab] = useState(can3D ? '3d' : 'photos')
+  // Default follows the product (it may arrive with the live catalog after the first render) until the user picks
+  const [choice, setTab] = useState(null)
+  const tab = choice ?? (can3D ? '3d' : 'photos')
   const guide = useRef()
 
   if (!p) {
@@ -57,10 +59,12 @@ export default function Product() {
   }
 
   const wished = wishlist.includes(p.id)
-  const soldOut = p.stock === 0
+  const unavailable = p.active === false // hidden in the admin
+  const soldOut = p.stock === 0 || unavailable
   const inCart = cart.filter((i) => i.id === p.id).reduce((n, i) => n + i.qty, 0)
   const atLimit = inCart >= p.stock
-  const related = [...products.filter((x) => x.brand === p.brand && x.id !== p.id), ...products.filter((x) => x.brand !== p.brand && has3D(x))].slice(0, 4)
+  const live = products.filter(listed)
+  const related = [...live.filter((x) => x.brand === p.brand && x.id !== p.id), ...live.filter((x) => x.brand !== p.brand && has3D(x))].slice(0, 4)
 
   const add = () => {
     setCart((c) => addToCart(c, p.id, size))
@@ -121,11 +125,11 @@ export default function Product() {
               <button key={s} aria-pressed={size === s} onClick={() => setSize(s)} disabled={soldOut}>{s}</button>
             ))}
           </div>
-          <p className={`small ${p.stock > 0 && p.stock <= 3 ? 'stock-low' : ''}`}>{stockText(p.stock)}{inCart ? ` · ${inCart} in your cart` : ''}</p>
+          <p className={`small ${p.stock > 0 && p.stock <= 3 ? 'stock-low' : ''}`}>{unavailable ? 'Currently unavailable' : stockText(p.stock)}{inCart ? ` · ${inCart} in your cart` : ''}</p>
 
           <div className="actions">
             <button className="btn primary" disabled={!size || soldOut || atLimit} onClick={add}>
-              {soldOut ? 'Out of stock' : atLimit ? 'All stock in your cart' : size ? 'Add to cart' : 'Select a size'}
+              {unavailable ? 'Unavailable' : soldOut ? 'Out of stock' : atLimit ? 'All stock in your cart' : size ? 'Add to cart' : 'Select a size'}
             </button>
             <button className="btn heart-btn" onClick={wish} aria-pressed={wished} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}>
               <Heart />

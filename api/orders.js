@@ -2,7 +2,7 @@ import { EMAIL, HttpError, json, readJson, route } from './_lib/http.js'
 import { sessionHash } from './_lib/auth.js'
 
 const ID = /^ORI-[A-Z0-9]+(-[A-Z0-9]+)+$/
-const PAYMENTS = new Set(['card', 'ewallet', 'transfer'])
+const PAYMENTS = new Set(['qris', 'card', 'ewallet', 'transfer'])
 const text = (v, min, max) => typeof v === 'string' && v.trim().length >= min && v.trim().length <= max
 
 // Field messages shown under the form

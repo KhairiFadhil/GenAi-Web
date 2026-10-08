@@ -320,6 +320,59 @@ create table if not exists order_events (
 create index if not exists order_events_order_idx on order_events (order_id, created_at);
 alter table order_events enable row level security;
 
+-- Products created/edited in the admin: storefront media (photos, 3D spec, hotspots, swatch) lives in media;
+-- uploaded photos are stored here and served by /api/media
+alter table products add column if not exists media jsonb not null default '{}'::jsonb;
+create table if not exists product_images (
+  id         uuid primary key default gen_random_uuid(),
+  product_id text not null references products (id) on delete cascade,
+  mime       text not null check (mime in ('image/webp', 'image/jpeg', 'image/png')),
+  data       bytea not null check (octet_length(data) between 1 and 3000000),
+  created_at timestamptz not null default now()
+);
+create index if not exists product_images_product_idx on product_images (product_id);
+alter table product_images enable row level security;
+
+-- User management
+alter table accounts add column if not exists disabled boolean not null default false;
+alter table accounts add column if not exists last_login_at timestamptz;
+
+-- Outgoing email (support replies). Sent by api/_lib/mail.js once SMTP_* is configured; queued until then.
+create table if not exists email_outbox (
+  id         bigint generated always as identity primary key,
+  to_email   text not null check (char_length(to_email) <= 120),
+  subject    text not null check (char_length(subject) <= 200),
+  body       text not null check (char_length(body) <= 5000),
+  status     text not null default 'queued' check (status in ('queued', 'sending', 'sent', 'failed')),
+  attempts   integer not null default 0,
+  last_error text,
+  created_at timestamptz not null default now(),
+  sent_at    timestamptz
+);
+create index if not exists email_outbox_status_idx on email_outbox (status, id);
+alter table email_outbox enable row level security;
+
+-- Support chat: each report is a conversation thread
+alter table reports add column if not exists admin_seen_at timestamptz;
+alter table reports add column if not exists customer_seen_at timestamptz;
+alter table reports add column if not exists last_message_at timestamptz;
+create table if not exists report_messages (
+  id          bigint generated always as identity primary key,
+  report_id   bigint not null references reports (id) on delete cascade,
+  author      text not null check (author in ('customer', 'admin')),
+  author_name text check (char_length(author_name) <= 80),
+  body        text not null check (char_length(body) between 1 and 2000),
+  email_id    bigint references email_outbox (id) on delete set null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists report_messages_report_idx on report_messages (report_id, id);
+alter table report_messages enable row level security;
+-- The old single reply field becomes the first admin message (idempotent)
+insert into report_messages (report_id, author, author_name, body, created_at)
+select r.id, 'admin', 'ORI support', r.admin_note, r.updated_at from reports r
+where r.admin_note is not null and not exists (select 1 from report_messages m where m.report_id = r.id);
+update reports set last_message_at = coalesce(last_message_at, updated_at), admin_note = null where admin_note is not null;
+
 alter table accounts enable row level security;
 alter table sessions enable row level security;
 alter table login_attempts enable row level security;
@@ -331,7 +384,8 @@ returns uuid
 language sql stable security definer
 set search_path = public, pg_temp
 as $$
-  select s.account_id from sessions s where s.token_hash = p_token and s.expires_at > now()
+  select s.account_id from sessions s join accounts a on a.id = s.account_id
+  where s.token_hash = p_token and s.expires_at > now() and not a.disabled
 $$;
 
 create or replace function ori_require_account(p_token text)
@@ -384,7 +438,7 @@ language sql stable security definer
 set search_path = public, pg_temp
 as $$
   select jsonb_build_object(
-    'account', (select jsonb_build_object('id', a.id, 'email', a.email, 'name', a.name, 'role', a.role, 'hash', a.password_hash)
+    'account', (select jsonb_build_object('id', a.id, 'email', a.email, 'name', a.name, 'role', a.role, 'hash', a.password_hash, 'disabled', a.disabled)
                 from accounts a where a.email = lower(trim(p_email))),
     'failures', (select count(*) from login_attempts l
                  where l.email = lower(trim(p_email)) and not l.ok and l.created_at > now() - interval '15 minutes')
@@ -405,6 +459,7 @@ returns timestamptz
 language sql security definer
 set search_path = public, pg_temp
 as $$
+  update accounts set last_login_at = now() where id = p_account;
   delete from sessions where account_id = p_account and expires_at < now();
   insert into sessions (token_hash, account_id, expires_at)
   values (p_token, p_account, now() + make_interval(days => least(greatest(p_days, 1), 90)))
@@ -460,8 +515,12 @@ begin
   return coalesce((
     select jsonb_agg(jsonb_build_object(
       'id', r.id, 'type', r.type, 'subject', r.subject, 'message', r.message, 'order_number', r.order_number,
-      'product_code', r.product_code, 'status', r.status, 'admin_note', r.admin_note, 'created_at', r.created_at, 'updated_at', r.updated_at
-    ) order by r.created_at desc)
+      'product_code', r.product_code, 'status', r.status, 'created_at', r.created_at, 'updated_at', r.updated_at,
+      'last_at', coalesce(r.last_message_at, r.created_at),
+      'last', (select jsonb_build_object('author', m.author, 'body', m.body) from report_messages m where m.report_id = r.id order by m.id desc limit 1),
+      'unread', (select count(*) from report_messages m where m.report_id = r.id and m.author = 'admin'
+                 and m.created_at > coalesce(r.customer_seen_at, '-infinity'))
+    ) order by coalesce(r.last_message_at, r.created_at) desc)
     from reports r where r.account_id = v), '[]');
 end
 $$;
@@ -566,8 +625,9 @@ begin
                 and (o.number ilike v_q or o.customer_name ilike v_q or o.email ilike v_q or o.city ilike v_q)),
     'items', coalesce((
       select jsonb_agg(t) from (
-        select o.number, o.customer_name, o.email, o.city, o.payment_method, o.total, o.status, o.created_at,
-               (select sum(i.qty) from order_items i where i.order_id = o.id)::int as item_count
+        select o.number, o.customer_name, o.email, o.city, o.payment_method, o.total, o.status, o.created_at, o.courier, o.waybill,
+               (select sum(i.qty) from order_items i where i.order_id = o.id)::int as item_count,
+               (select jsonb_agg(distinct i.product_id) from order_items i where i.order_id = o.id) as product_ids
         from orders o
         where (coalesce(p_status, '') = '' or o.status = p_status)
           and (o.number ilike v_q or o.customer_name ilike v_q or o.email ilike v_q or o.city ilike v_q)
@@ -694,7 +754,9 @@ begin
   perform ori_require_admin(p_token);
   return coalesce((
     select jsonb_agg(t order by t.brand, t.name) from (
-      select p.id, p.brand, p.name, p.category, p.condition, p.price, p.stock, p.active, p.updated_at,
+      select p.id, p.brand, p.name, p.category, p.condition, p.color, p.description, to_jsonb(p.sizes) as sizes,
+             p.price, p.stock, p.active, p.media, p.updated_at,
+             exists (select 1 from order_items i where i.product_id = p.id) as has_orders,
              coalesce((select sum(i.qty) from order_items i join orders o on o.id = i.order_id
                        where i.product_id = p.id and o.status <> 'cancelled' and o.created_at >= now() - interval '30 days'), 0)::int as sold_30d
       from products p
@@ -707,18 +769,28 @@ returns jsonb
 language plpgsql security definer
 set search_path = public, pg_temp
 as $$
-declare v jsonb;
+declare v products;
 begin
   perform ori_require_admin(p_token);
   update products pr set
+    brand = case when p ? 'brand' then trim(p ->> 'brand') else pr.brand end,
+    name = case when p ? 'name' then trim(p ->> 'name') else pr.name end,
+    category = case when p ? 'category' then trim(p ->> 'category') else pr.category end,
+    condition = case when p ? 'condition' then p ->> 'condition' else pr.condition end,
+    color = case when p ? 'color' then nullif(trim(p ->> 'color'), '') else pr.color end,
+    description = case when p ? 'description' then nullif(trim(p ->> 'description'), '') else pr.description end,
+    sizes = case when p ? 'sizes' then array(select jsonb_array_elements_text(p -> 'sizes')) else pr.sizes end,
+    media = case when p ? 'media' then p -> 'media' else pr.media end,
     price = coalesce((p ->> 'price')::integer, pr.price),
     stock = coalesce((p ->> 'stock')::integer, pr.stock),
     active = coalesce((p ->> 'active')::boolean, pr.active),
     updated_at = now()
   where pr.id = p ->> 'id'
-  returning jsonb_build_object('id', pr.id, 'price', pr.price, 'stock', pr.stock, 'active', pr.active, 'updated_at', pr.updated_at) into v;
-  if v is null then raise exception 'not_found' using errcode = 'P0002'; end if;
-  return v;
+  returning * into v;
+  if v.id is null then raise exception 'not_found' using errcode = 'P0002'; end if;
+  return jsonb_build_object('id', v.id, 'brand', v.brand, 'name', v.name, 'category', v.category, 'condition', v.condition,
+    'color', v.color, 'description', v.description, 'sizes', to_jsonb(v.sizes), 'media', v.media,
+    'price', v.price, 'stock', v.stock, 'active', v.active, 'updated_at', v.updated_at);
 end
 $$;
 
@@ -733,10 +805,14 @@ begin
     'counts', coalesce((select jsonb_object_agg(s.status, s.n) from (select status, count(*) as n from reports group by 1) s), '{}'),
     'items', coalesce((
       select jsonb_agg(t) from (
-        select r.id, r.type, r.subject, r.message, r.email, r.order_number, r.product_code, r.status, r.admin_note, r.created_at, r.updated_at,
-               (select a.name from accounts a where a.id = r.account_id) as name
+        select r.id, r.type, r.subject, r.message, r.email, r.order_number, r.product_code, r.status, r.created_at, r.updated_at,
+               coalesce(r.last_message_at, r.created_at) as last_at,
+               (select a.name from accounts a where a.id = r.account_id) as name,
+               (select jsonb_build_object('author', m.author, 'body', m.body) from report_messages m where m.report_id = r.id order by m.id desc limit 1) as last,
+               (case when r.admin_seen_at is null then 1 else 0 end) + (select count(*) from report_messages m
+                 where m.report_id = r.id and m.author = 'customer' and m.created_at > coalesce(r.admin_seen_at, '-infinity'))::int as unread
         from reports r where coalesce(p_status, '') = '' or r.status = p_status
-        order by (r.status in ('open', 'in_progress')) desc, r.created_at desc
+        order by (r.status in ('open', 'in_progress')) desc, coalesce(r.last_message_at, r.created_at) desc
         limit 200
       ) t), '[]')
   );
@@ -753,11 +829,16 @@ begin
   perform ori_require_admin(p_token);
   update reports r set
     status = coalesce(p ->> 'status', r.status),
-    admin_note = case when p ? 'note' then nullif(trim(p ->> 'note'), '') else r.admin_note end,
     updated_at = now()
   where r.id = (p ->> 'id')::bigint
-  returning jsonb_build_object('id', r.id, 'status', r.status, 'admin_note', r.admin_note, 'updated_at', r.updated_at) into v;
+  returning jsonb_build_object('id', r.id, 'status', r.status, 'updated_at', r.updated_at) into v;
   if v is null then raise exception 'not_found' using errcode = 'P0002'; end if;
+  -- a note from this older status endpoint becomes an admin chat message (no email)
+  if nullif(trim(p ->> 'note'), '') is not null then
+    insert into report_messages (report_id, author, author_name, body)
+    select (p ->> 'id')::bigint, 'admin', a.name, trim(p ->> 'note') from accounts a where a.id = ori_require_admin(p_token);
+    update reports set last_message_at = now() where id = (p ->> 'id')::bigint;
+  end if;
   return v;
 end
 $$;
@@ -802,7 +883,7 @@ begin
   return jsonb_build_object(
     'accounts', coalesce((
       select jsonb_agg(t) from (
-        select a.email, a.name, a.role, a.created_at,
+        select a.email, a.name, a.role, a.created_at, a.disabled, a.last_login_at,
                (select count(*) from orders o where o.account_id = a.id)::int as orders,
                (select coalesce(sum(o.total), 0) from orders o where o.account_id = a.id and o.status <> 'cancelled')::bigint as spent
         from accounts a order by a.created_at desc
@@ -825,3 +906,373 @@ grant execute on function api_auth_register(jsonb), api_auth_lookup(text), api_a
   api_order_link(text, text), api_admin_overview(text), api_admin_orders(text, text, text, integer, integer), api_admin_order(text, text),
   api_admin_order_update(text, jsonb), api_admin_order_event(text, jsonb), api_admin_products(text), api_admin_product_update(text, jsonb), api_admin_reports(text, text),
   api_admin_report_update(text, jsonb), api_admin_verifications(text), api_admin_people(text) to ori_api;
+
+-- Storefront catalog: live price/stock/visibility plus admin-edited details and admin-created products
+create or replace function api_catalog()
+returns jsonb
+language sql stable security definer
+set search_path = public, pg_temp
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', p.id, 'brand', p.brand, 'name', p.name, 'category', p.category, 'price', p.price, 'sizes', to_jsonb(p.sizes),
+    'stock', p.stock, 'condition', p.condition, 'color', p.color, 'description', p.description, 'active', p.active, 'media', p.media
+  ) order by p.id), '[]') from products p
+$$;
+
+create or replace function api_media_get(p_id uuid)
+returns table (mime text, data bytea)
+language sql stable security definer
+set search_path = public, pg_temp
+as $$
+  select i.mime, i.data from product_images i where i.id = p_id
+$$;
+
+create or replace function api_admin_media_add(p_token text, p_product text, p_mime text, p_data bytea)
+returns jsonb
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare v uuid;
+begin
+  perform ori_require_admin(p_token);
+  if not exists (select 1 from products where id = p_product) then raise exception 'not_found' using errcode = 'P0002'; end if;
+  insert into product_images (product_id, mime, data) values (p_product, p_mime, p_data) returning id into v;
+  return jsonb_build_object('id', v, 'url', '/api/media?id=' || v);
+end
+$$;
+
+-- New product; the ID is derived from brand + name (ORI-NK-DUN-001)
+create or replace function api_admin_product_create(p_token text, p jsonb)
+returns jsonb
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_brand text := trim(p ->> 'brand');
+  v_name  text := trim(p ->> 'name');
+  v_base  text := 'ORI-' || coalesce(nullif(upper(left(regexp_replace(v_brand, '[^A-Za-z]', '', 'g'), 2)), ''), 'XX')
+                  || '-' || coalesce(nullif(upper(left(regexp_replace(v_name, '[^A-Za-z0-9]', '', 'g'), 3)), ''), 'NEW');
+  v_id    text;
+  n       integer := 1;
+begin
+  perform ori_require_admin(p_token);
+  loop
+    v_id := v_base || '-' || lpad(n::text, 3, '0');
+    exit when not exists (select 1 from products where id = v_id);
+    n := n + 1;
+  end loop;
+  insert into products (id, brand, name, category, price, sizes, stock, condition, color, description, active, media)
+  values (v_id, v_brand, v_name, trim(p ->> 'category'), (p ->> 'price')::integer,
+          array(select jsonb_array_elements_text(p -> 'sizes')), coalesce((p ->> 'stock')::integer, 0), p ->> 'condition',
+          nullif(trim(p ->> 'color'), ''), nullif(trim(p ->> 'description'), ''), coalesce((p ->> 'active')::boolean, false),
+          coalesce(p -> 'media', '{}'::jsonb));
+  return jsonb_build_object('id', v_id);
+end
+$$;
+
+-- Only products that were never ordered can be deleted; others should be hidden instead
+create or replace function api_admin_product_delete(p_token text, p_id text)
+returns jsonb
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform ori_require_admin(p_token);
+  if exists (select 1 from order_items where product_id = p_id) then raise exception 'has_orders' using errcode = '22023'; end if;
+  delete from products where id = p_id;
+  if not found then raise exception 'not_found' using errcode = 'P0002'; end if;
+  return jsonb_build_object('id', p_id, 'deleted', true);
+end
+$$;
+
+-- Support chat, customer side
+create or replace function ori_thread(p_report bigint)
+returns jsonb
+language sql stable security definer
+set search_path = public, pg_temp
+as $$
+  select jsonb_build_array(jsonb_build_object('id', 0, 'author', 'customer', 'author_name', coalesce(a.name, r.email), 'body', r.message, 'at', r.created_at))
+    || coalesce((select jsonb_agg(jsonb_build_object('id', m.id, 'author', m.author, 'author_name', m.author_name, 'body', m.body, 'at', m.created_at,
+                   'email', (select e.status from email_outbox e where e.id = m.email_id)) order by m.id)
+                 from report_messages m where m.report_id = r.id), '[]')
+  from reports r left join accounts a on a.id = r.account_id where r.id = p_report
+$$;
+
+create or replace function api_report_thread(p_token text, p_id bigint)
+returns jsonb
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v uuid := ori_require_account(p_token);
+  r reports;
+begin
+  select * into r from reports where id = p_id and account_id = v;
+  if not found then raise exception 'not_found' using errcode = 'P0002'; end if;
+  update reports set customer_seen_at = now() where id = r.id;
+  return jsonb_build_object('id', r.id, 'subject', r.subject, 'type', r.type, 'status', r.status, 'order_number', r.order_number,
+    'product_code', r.product_code, 'created_at', r.created_at, 'messages', ori_thread(r.id));
+end
+$$;
+
+create or replace function api_report_message(p_token text, p jsonb)
+returns jsonb
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v uuid := ori_require_account(p_token);
+  r reports;
+  m report_messages;
+begin
+  select * into r from reports where id = (p ->> 'id')::bigint and account_id = v for update;
+  if not found then raise exception 'not_found' using errcode = 'P0002'; end if;
+  insert into report_messages (report_id, author, author_name, body)
+  select r.id, 'customer', a.name, trim(p ->> 'body') from accounts a where a.id = v
+  returning * into m;
+  update reports set
+    status = case when status in ('resolved', 'closed') then 'open' else status end, -- a new message reopens it
+    last_message_at = m.created_at, customer_seen_at = m.created_at, updated_at = now()
+  where id = r.id;
+  return jsonb_build_object('id', m.id, 'author', m.author, 'author_name', m.author_name, 'body', m.body, 'at', m.created_at);
+end
+$$;
+
+-- Support chat, admin side
+create or replace function api_admin_report_thread(p_token text, p_id bigint)
+returns jsonb
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare r reports;
+begin
+  perform ori_require_admin(p_token);
+  select * into r from reports where id = p_id;
+  if not found then raise exception 'not_found' using errcode = 'P0002'; end if;
+  update reports set admin_seen_at = now() where id = r.id;
+  return jsonb_build_object('id', r.id, 'subject', r.subject, 'type', r.type, 'status', r.status, 'email', r.email,
+    'order_number', r.order_number, 'product_code', r.product_code, 'created_at', r.created_at,
+    'customer', (select jsonb_build_object('name', a.name, 'email', a.email, 'disabled', a.disabled, 'since', a.created_at,
+                   'orders', (select count(*) from orders o where o.account_id = a.id))
+                 from accounts a where a.id = r.account_id),
+    'order', (select jsonb_build_object('number', o.number, 'status', o.status, 'total', o.total, 'courier', o.courier, 'waybill', o.waybill)
+              from orders o where o.number = r.order_number),
+    'messages', ori_thread(r.id));
+end
+$$;
+
+-- Reply (queues an email to the customer) and optionally change the status
+create or replace function api_admin_report_message(p_token text, p jsonb)
+returns jsonb
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_admin uuid := ori_require_admin(p_token);
+  r       reports;
+  m       report_messages;
+  v_mail  bigint;
+  v_name  text := (select a.name from accounts a where a.id = v_admin);
+begin
+  select * into r from reports where id = (p ->> 'id')::bigint for update;
+  if not found then raise exception 'not_found' using errcode = 'P0002'; end if;
+  if coalesce((p ->> 'email')::boolean, true) then
+    insert into email_outbox (to_email, subject, body)
+    values (r.email, left('Re: ' || r.subject || ' [ORI support #' || r.id || ']', 200),
+            left(trim(p ->> 'body') || E'\n\n-- ' || v_name || E', ORI Support\nReply or follow the conversation: ' || coalesce(p ->> 'link', '/account?view=support'), 5000))
+    returning id into v_mail;
+  end if;
+  insert into report_messages (report_id, author, author_name, body, email_id)
+  values (r.id, 'admin', v_name, trim(p ->> 'body'), v_mail)
+  returning * into m;
+  update reports set
+    status = coalesce(p ->> 'status', case when status = 'open' then 'in_progress' else status end),
+    last_message_at = m.created_at, admin_seen_at = m.created_at, updated_at = now()
+  where id = r.id;
+  return jsonb_build_object('id', m.id, 'author', m.author, 'author_name', m.author_name, 'body', m.body, 'at', m.created_at,
+    'email', case when v_mail is null then null else 'queued' end,
+    'status', (select status from reports where id = r.id));
+end
+$$;
+
+-- Email outbox worker (api/_lib/mail.js)
+create or replace function api_mail_claim(p_limit integer)
+returns jsonb
+language sql security definer
+set search_path = public, pg_temp
+as $$
+  with picked as (
+    select id from email_outbox
+    where status = 'queued' or (status in ('failed', 'sending') and attempts < 5 and created_at < now() - interval '1 minute')
+    order by id limit least(greatest(p_limit, 1), 50) for update skip locked
+  ), claimed as (
+    update email_outbox e set status = 'sending', attempts = e.attempts + 1 from picked where e.id = picked.id
+    returning jsonb_build_object('id', e.id, 'to', e.to_email, 'subject', e.subject, 'body', e.body) as j
+  )
+  select coalesce(jsonb_agg(j), '[]') from claimed
+$$;
+
+create or replace function api_mail_done(p_id bigint, p_ok boolean, p_error text)
+returns void
+language sql security definer
+set search_path = public, pg_temp
+as $$
+  update email_outbox set status = case when p_ok then 'sent' else 'failed' end,
+    sent_at = case when p_ok then now() end, last_error = left(p_error, 500) where id = p_id
+$$;
+
+-- User management
+create or replace function api_admin_account(p_token text, p_email text)
+returns jsonb
+language plpgsql stable security definer
+set search_path = public, pg_temp
+as $$
+declare a accounts;
+begin
+  perform ori_require_admin(p_token);
+  select * into a from accounts where email = lower(trim(p_email));
+  if not found then raise exception 'not_found' using errcode = 'P0002'; end if;
+  return jsonb_build_object('email', a.email, 'name', a.name, 'role', a.role, 'disabled', a.disabled,
+    'created_at', a.created_at, 'last_login_at', a.last_login_at,
+    'sessions', (select count(*) from sessions s where s.account_id = a.id and s.expires_at > now()),
+    'orders', coalesce((select jsonb_agg(jsonb_build_object('number', o.number, 'status', o.status, 'total', o.total, 'created_at', o.created_at) order by o.created_at desc)
+                        from orders o where o.account_id = a.id), '[]'),
+    'reports', coalesce((select jsonb_agg(jsonb_build_object('id', r.id, 'subject', r.subject, 'status', r.status, 'created_at', r.created_at) order by r.created_at desc)
+                         from reports r where r.account_id = a.id), '[]'),
+    'spent', (select coalesce(sum(o.total), 0) from orders o where o.account_id = a.id and o.status <> 'cancelled'));
+end
+$$;
+
+-- Role / name / disable. An admin can't demote or disable themselves (no lock-out).
+create or replace function api_admin_account_update(p_token text, p jsonb)
+returns jsonb
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_me accounts;
+  a    accounts;
+begin
+  select * into v_me from accounts where id = ori_require_admin(p_token);
+  select * into a from accounts where email = lower(trim(p ->> 'email')) for update;
+  if not found then raise exception 'not_found' using errcode = 'P0002'; end if;
+  if a.id = v_me.id and ((p ->> 'role') = 'customer' or coalesce((p ->> 'disabled')::boolean, false)) then
+    raise exception 'cannot_change_self' using errcode = '22023';
+  end if;
+  update accounts set
+    role = coalesce(p ->> 'role', role),
+    name = case when p ? 'name' then trim(p ->> 'name') else name end,
+    disabled = coalesce((p ->> 'disabled')::boolean, disabled)
+  where id = a.id
+  returning * into a;
+  if a.disabled then delete from sessions where account_id = a.id; end if;
+  return jsonb_build_object('email', a.email, 'name', a.name, 'role', a.role, 'disabled', a.disabled);
+end
+$$;
+
+-- New password (hashed in the API); signs the account out everywhere
+create or replace function api_admin_account_password(p_token text, p jsonb)
+returns jsonb
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare v uuid;
+begin
+  perform ori_require_admin(p_token);
+  update accounts set password_hash = p ->> 'hash' where email = lower(trim(p ->> 'email')) returning id into v;
+  if v is null then raise exception 'not_found' using errcode = 'P0002'; end if;
+  delete from sessions where account_id = v;
+  return jsonb_build_object('email', lower(trim(p ->> 'email')), 'reset', true);
+end
+$$;
+
+create or replace function api_admin_account_create(p_token text, p jsonb)
+returns jsonb
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare a accounts;
+begin
+  perform ori_require_admin(p_token);
+  insert into accounts (email, name, password_hash, role)
+  values (lower(trim(p ->> 'email')), trim(p ->> 'name'), p ->> 'hash', coalesce(p ->> 'role', 'customer'))
+  returning * into a;
+  return jsonb_build_object('email', a.email, 'name', a.name, 'role', a.role);
+exception when unique_violation then
+  return jsonb_build_object('error', 'email_taken');
+end
+$$;
+
+revoke all on function ori_thread(bigint) from public;
+revoke all on function api_catalog(), api_media_get(uuid), api_admin_media_add(text, text, text, bytea), api_admin_product_create(text, jsonb),
+  api_admin_product_delete(text, text), api_report_thread(text, bigint), api_report_message(text, jsonb), api_admin_report_thread(text, bigint),
+  api_admin_report_message(text, jsonb), api_mail_claim(integer), api_mail_done(bigint, boolean, text), api_admin_account(text, text),
+  api_admin_account_update(text, jsonb), api_admin_account_password(text, jsonb), api_admin_account_create(text, jsonb) from public;
+grant execute on function api_catalog(), api_media_get(uuid), api_admin_media_add(text, text, text, bytea), api_admin_product_create(text, jsonb),
+  api_admin_product_delete(text, text), api_report_thread(text, bigint), api_report_message(text, jsonb), api_admin_report_thread(text, bigint),
+  api_admin_report_message(text, jsonb), api_mail_claim(integer), api_mail_done(bigint, boolean, text), api_admin_account(text, text),
+  api_admin_account_update(text, jsonb), api_admin_account_password(text, jsonb), api_admin_account_create(text, jsonb) to ori_api;
+
+-- Simulated payment (no gateway yet): the customer opens /pay/<number>, picks a method and confirms.
+-- Access: the signed-in owner, or whoever knows the order's email (guest checkout).
+alter table orders drop constraint if exists orders_payment_method_check;
+alter table orders add constraint orders_payment_method_check check (payment_method in ('card', 'ewallet', 'transfer', 'qris'));
+
+create or replace function ori_order_for(p jsonb)
+returns orders
+language plpgsql stable security definer
+set search_path = public, pg_temp
+as $$
+declare o orders;
+begin
+  select * into o from orders where number = upper(trim(p ->> 'number'));
+  if not found or not (
+       (o.account_id is not null and o.account_id = ori_session_account(p ->> 'session'))
+    or (nullif(trim(p ->> 'email'), '') is not null and o.email = lower(trim(p ->> 'email')))) then
+    raise exception 'not_found' using errcode = 'P0002';
+  end if;
+  return o;
+end
+$$;
+
+create or replace function ori_order_summary(o orders)
+returns jsonb
+language sql stable security definer
+set search_path = public, pg_temp
+as $$
+  select jsonb_build_object('number', o.number, 'status', o.status, 'total', o.total, 'subtotal', o.subtotal, 'shipping', o.shipping_fee,
+    'payment_method', o.payment_method, 'name', o.customer_name, 'email', o.email, 'city', o.city, 'created_at', o.created_at, 'paid_at', o.paid_at,
+    'items', (select jsonb_agg(jsonb_build_object('id', i.product_id, 'name', p.name, 'size', i.size, 'qty', i.qty, 'price', i.unit_price) order by i.product_id)
+              from order_items i join products p on p.id = i.product_id where i.order_id = o.id))
+$$;
+
+create or replace function api_order_lookup(p jsonb)
+returns jsonb
+language sql stable security definer
+set search_path = public, pg_temp
+as $$
+  select ori_order_summary(ori_order_for(p))
+$$;
+
+create or replace function api_order_pay(p jsonb)
+returns jsonb
+language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare
+  o        orders := ori_order_for(p);
+  v_method text := p ->> 'method';
+begin
+  if o.status <> 'pending' then raise exception 'not_payable' using errcode = '22023'; end if;
+  update orders set status = 'paid', paid_at = now(), payment_method = coalesce(v_method, payment_method)
+  where id = o.id returning * into o;
+  insert into order_events (order_id, kind, text)
+  values (o.id, 'paid', 'Payment confirmed (' || case o.payment_method when 'qris' then 'QRIS' when 'card' then 'card'
+                                                      when 'ewallet' then 'e-wallet' else 'bank transfer' end || ')');
+  return ori_order_summary(o);
+end
+$$;
+
+revoke all on function ori_order_for(jsonb), ori_order_summary(orders) from public;
+revoke all on function api_order_lookup(jsonb), api_order_pay(jsonb) from public;
+grant execute on function api_order_lookup(jsonb), api_order_pay(jsonb) to ori_api;

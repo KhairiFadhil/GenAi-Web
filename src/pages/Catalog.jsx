@@ -1,9 +1,8 @@
 import { useSearchParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard.jsx'
 import { Search } from '../components/Icons.jsx'
-import { allSizes, brands, categories, has3D, products } from '../store.js'
+import { allSizes, brands, categories, has3D, listed, products } from '../store.js'
 
-const conditions = [...new Set(products.map((p) => p.condition))]
 const PRICES = { '': 'Any price', '0-1500000': 'Under Rp1,5 jt', '1500000-3000000': 'Rp1,5 – 3 jt', '3000000-99999999': 'Over Rp3 jt' }
 const KEYS = ['q', 'brand', 'category', 'size', 'condition', 'price', 'sort', '3d']
 
@@ -21,7 +20,9 @@ export default function Catalog() {
   const q = f.q.trim().toLowerCase()
   const active = KEYS.filter((k) => k !== 'sort' && f[k]).length
 
+  const conditions = [...new Set(products.filter(listed).map((p) => p.condition))]
   const list = products
+    .filter(listed)
     .filter((p) => !q || `${p.brand} ${p.name} ${p.color} ${p.id}`.toLowerCase().includes(q))
     .filter((p) => !f.brand || p.brand === f.brand)
     .filter((p) => !f.category || p.category === f.category)

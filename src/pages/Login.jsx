@@ -11,6 +11,7 @@ const ERRORS = {
   invalid_credentials: 'Email or password is incorrect.',
   too_many_attempts: 'Too many attempts. Try again in 15 minutes.',
   email_taken: 'An account with this email already exists.',
+  account_disabled: 'This account has been disabled. Contact ORI support for help.',
 }
 
 export default function Login() {

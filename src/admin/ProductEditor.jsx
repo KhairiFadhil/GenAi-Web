@@ -7,7 +7,7 @@ import './products-editor.css'
 const ProductViewer = lazy(() => import('../components/ProductViewer.jsx'))
 
 const CATEGORIES = ['Sneakers', 'Apparel', 'Accessories']
-const CONDITIONS = [['BNIB', 'Brand new in box'], ['Pre-Owned', 'Pre-owned']]
+const CONDITIONS = [['BNIB', 'New in box'], ['Pre-Owned', 'Pre-owned']]
 const PRESETS = {
   Sneakers: ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'],
   Apparel: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
@@ -452,7 +452,7 @@ export default function ProductEditor({ row, brands, onClose, onDone }) {
         <nav ref={nav} className={`pe-steps ${edit ? 'tabs' : ''}`} aria-label={edit ? 'Edit sections' : 'Steps'}>
           {sections.map(([k, label], i) => (
             <button type="button" key={k} aria-current={section === k ? 'step' : undefined} className={visited.includes(k) ? 'seen' : ''} onClick={() => go(k)}>
-              {!edit && <span className="n">{i + 1}</span>}{label}
+              {!edit && <span className="n">{i + 1}</span>}<span className="lbl">{label}</span>
               {Object.keys(errors).some((e) => (SECTION_OF[e] ?? 'basics') === k) && <span className="dot" aria-label="has errors" />}
             </button>
           ))}

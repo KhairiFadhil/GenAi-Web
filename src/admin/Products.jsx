@@ -86,11 +86,13 @@ export default function Products() {
         return (
           <>
             <PageHead title="Products" sub="Catalog · price & stock">
-              <button className="adm-btn primary pe-add" onClick={() => setEditing('new')}>+ Add product</button>
-              <div className="pr-summary">
-                <span><b>{items.length}</b> products</span>
-                <span><b>{counts.listed}</b> listed</span>
-                <span className={counts.low ? 'warn' : ''}><b>{counts.low}</b> low stock</span>
+              <div className="pr-headside">
+                <div className="pr-summary">
+                  <span><b>{items.length}</b> products</span>
+                  <span><b>{counts.listed}</b> listed</span>
+                  <span className={counts.low ? 'warn' : ''}><b>{counts.low}</b> low stock</span>
+                </div>
+                <button className="adm-btn primary pe-add" onClick={() => setEditing('new')}>+ Add product</button>
               </div>
             </PageHead>
 

@@ -9,7 +9,10 @@ export const GET = route(async (request, sql) => {
   const token = requireSession(request)
   const email = new URL(request.url).searchParams.get('email') ?? ''
   if (!email || email.length > 120) throw new HttpError(400, 'invalid_input')
-  const [{ data }] = await sql`select api_admin_account(${token}, ${email}) as data`
+  const guest = new URL(request.url).searchParams.get('guest') === '1' // checkout without an account
+  const [{ data }] = guest
+    ? await sql`select api_admin_guest(${token}, ${email}) as data`
+    : await sql`select api_admin_account(${token}, ${email}) as data`
   return json(data)
 })
 

@@ -202,3 +202,7 @@
 @media (prefers-reduced-motion: reduce) {
   .admin .sp-tickets li, .admin .sp-msg, .admin .sp-user, .admin .sp-ticket, .admin .sp-sheet, .admin .sp-dialog, .admin .sp-dot { animation: none; transition: none; }
 }
+
+/* Guest customers (checkout without an account) */
+.admin .sp-avatar.is-guest, .admin .sp-pill.is-guest { color: #e3b341; border-color: rgb(227 179 65 / 0.45); }
+.admin .sp-guest-note { font-size: 12px; }

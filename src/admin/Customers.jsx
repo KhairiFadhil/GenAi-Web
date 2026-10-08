@@ -141,7 +141,55 @@ function UserSheet({ email, me, onClose, onChanged }) {
   )
 }
 
-function AddUser({ onClose, onCreated }) {
+// Checkout without an account: orders by email, and an option to create an account for them
+function GuestSheet({ email, onClose, onCreateAccount }) {
+  const state = useLoad(`admin/account?guest=1&email=${encodeURIComponent(email)}`)
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <div className="sp-sheet-wrap" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <aside className="sp-sheet" role="dialog" aria-modal="true" aria-label={`Guest ${email}`}>
+        <button className="sp-x" onClick={onClose} aria-label="Close">×</button>
+        <Gate state={state}>
+          {(g) => (
+            <>
+              <header className="sp-profile">
+                <span className="sp-avatar lg is-guest">{initials(g.name)}</span>
+                <div>
+                  <h2>{g.name}</h2>
+                  <span className="adm-muted">{g.email}</span>
+                  <div className="sp-pills"><span className="sp-pill is-guest">Guest</span></div>
+                </div>
+              </header>
+              <dl className="sp-stats">
+                <div><dt>Orders</dt><dd>{g.orders.length}</dd></div>
+                <div><dt>Spent</dt><dd>{rupiah(g.spent)}</dd></div>
+                <div><dt>City</dt><dd>{g.city}</dd></div>
+                <div><dt>Phone</dt><dd>{g.phone ?? '–'}</dd></div>
+              </dl>
+              <section className="sp-actions" aria-label="Guest actions">
+                <div className="adm-label">Account</div>
+                <p className="adm-muted">Checked out without an account. Creating one for them moves these orders into it and gives them order tracking and support.</p>
+                <button className="sp-btn primary" onClick={() => onCreateAccount({ name: g.name, email: g.email })}>Create account</button>
+              </section>
+              <section className="sp-related">
+                <div className="adm-label">Orders</div>
+                <ul>{g.orders.map((o) => (
+                  <li key={o.number}><Link to={`/admin/orders?number=${o.number}`} className="mono">{o.number}</Link><Status value={o.status} /><span className="mono">{rupiah(o.total)}</span></li>
+                ))}</ul>
+              </section>
+            </>
+          )}
+        </Gate>
+      </aside>
+    </div>
+  )
+}
+
+function AddUser({ onClose, onCreated, initial = {} }) {
   const ref = useRef()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -171,15 +219,15 @@ function AddUser({ onClose, onCreated }) {
       ) : (
         <form className="sp-dialog-body" onSubmit={submit}>
           <h2>Add user</h2>
-          <label>Name<input className="sp-input" name="name" required minLength={2} maxLength={80} autoFocus /></label>
-          <label>Email<input className="sp-input" name="email" type="email" required maxLength={120} /></label>
+          <label>Name<input className="sp-input" name="name" required minLength={2} maxLength={80} autoFocus defaultValue={initial.name} /></label>
+          <label>Email<input className="sp-input" name="email" type="email" required maxLength={120} defaultValue={initial.email} readOnly={!!initial.email} /></label>
           <label>Role
             <select className="sp-input" name="role" defaultValue="customer">
               <option value="customer">Customer</option>
               <option value="admin">Admin</option>
             </select>
           </label>
-          <p className="adm-muted">A temporary password is generated and shown once.</p>
+          <p className="adm-muted">A temporary password is generated and shown once.{initial.email ? ' Their guest orders move into the new account.' : ''}</p>
           {error && <p className="sp-error" role="alert">{error}</p>}
           <div className="sp-dialog-foot">
             <button type="button" className="sp-btn" onClick={() => ref.current.close()}>Cancel</button>
@@ -198,16 +246,18 @@ export default function Customers() {
   const [filter, setFilter] = useState('all')
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(null)
-  const [adding, setAdding] = useState(false)
+  const [guest, setGuest] = useState(null)
+  const [adding, setAdding] = useState(false) // true or { name, email } prefill
   const [copied, setCopied] = useState(false)
   const needle = q.trim().toLowerCase()
 
   return (
     <Gate state={state}>
-      {({ accounts, subscribers }) => {
+      {({ accounts, subscribers, guests = [] }) => {
         const counts = Object.fromEntries(FILTERS.map(([k, , fn]) => [k, accounts.filter(fn).length]))
         const shown = accounts.filter(FILTERS.find(([k]) => k === filter)[2]).filter((a) => !needle || `${a.name} ${a.email}`.toLowerCase().includes(needle))
         const subs = subscribers.filter((s) => !needle || s.email.includes(needle))
+        const guestsShown = guests.filter((g) => !needle || `${g.name} ${g.email} ${g.city}`.toLowerCase().includes(needle))
         return (
           <>
             <PageHead title="Customers" sub="Accounts, access & newsletter">
@@ -224,12 +274,13 @@ export default function Customers() {
             <div className="sp-tools">
               <div className="sp-seg" role="tablist" aria-label="View">
                 <button role="tab" aria-selected={tab === 'accounts'} onClick={() => setTab('accounts')}>Accounts<span className="adm-count">{accounts.length}</span></button>
+                <button role="tab" aria-selected={tab === 'guests'} onClick={() => setTab('guests')}>Guests<span className="adm-count">{guests.length}</span></button>
                 <button role="tab" aria-selected={tab === 'subscribers'} onClick={() => setTab('subscribers')}>Newsletter<span className="adm-count">{subscribers.length}</span></button>
               </div>
               <label className="sp-search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.5-4.5" /></svg>
                 <span className="sr-only">Search</span>
-                <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tab === 'accounts' ? 'Search name or email' : 'Search email'} />
+                <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tab === 'subscribers' ? 'Search email' : 'Search name or email'} />
               </label>
               {tab === 'accounts' ? (
                 <div className="sp-seg" role="tablist" aria-label="Filter accounts">
@@ -237,6 +288,8 @@ export default function Customers() {
                     <button key={k} role="tab" aria-selected={filter === k} onClick={() => setFilter(k)}>{label}<span className="adm-count">{counts[k]}</span></button>
                   ))}
                 </div>
+              ) : tab === 'guests' ? (
+                <span className="adm-muted sp-guest-note">Checkouts without an account</span>
               ) : (
                 <button className="sp-btn" onClick={() => copy(subs.map((s) => s.email).join(', '), (ok) => (setCopied(ok), setTimeout(() => setCopied(false), 2000), toast(ok ? `${subs.length} emails copied` : 'Copy failed')))}>
                   {copied ? 'Copied ✓' : `Copy ${subs.length} emails`}
@@ -264,6 +317,26 @@ export default function Customers() {
                 ))}
                 {!shown.length && <p className="adm-empty sp-none">No accounts match.</p>}
               </section>
+            ) : tab === 'guests' ? (
+              <section className="adm-card flush sp-users" aria-label="Guest customers">
+                <div className="sp-user sp-headrow" aria-hidden="true">
+                  <span>Guest</span><span>Type</span><span>City</span><span>Last order</span><span className="r">Orders</span><span className="r">Spent</span>
+                </div>
+                {guestsShown.map((g, i) => (
+                  <button key={g.email} className="sp-user" style={{ '--i': Math.min(i, 12) }} onClick={() => setGuest(g.email)}>
+                    <span className="sp-person">
+                      <span className="sp-avatar is-guest">{initials(g.name)}</span>
+                      <span><b>{g.name}</b><span className="adm-muted">{g.email}</span></span>
+                    </span>
+                    <span><span className="sp-pill is-guest">Guest</span></span>
+                    <span className="adm-muted">{g.city}</span>
+                    <span className="adm-muted sp-login">{ago(g.last_order_at)}</span>
+                    <span className="r mono">{g.orders}</span>
+                    <span className="r mono sp-spent">{rupiah(g.spent)}</span>
+                  </button>
+                ))}
+                {!guestsShown.length && <p className="adm-empty sp-none">No guest customers.</p>}
+              </section>
             ) : (
               <section className="adm-card flush sp-subs" aria-label="Newsletter subscribers">
                 <ul>
@@ -274,7 +347,8 @@ export default function Customers() {
             )}
 
             {open && <UserSheet key={open} email={open} me={me} onClose={() => setOpen(null)} onChanged={state.reload} />}
-            {adding && <AddUser onClose={() => setAdding(false)} onCreated={state.reload} />}
+            {guest && <GuestSheet key={guest} email={guest} onClose={() => setGuest(null)} onCreateAccount={(g) => (setGuest(null), setAdding(g))} />}
+            {adding && <AddUser initial={adding === true ? {} : adding} onClose={() => setAdding(false)} onCreated={state.reload} />}
           </>
         )
       }}

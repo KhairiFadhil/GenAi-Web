@@ -379,3 +379,20 @@
 .admin ~ .toasts .toast::before { content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px rgb(126 231 135 / 0.15); }
 .admin ~ .toasts .toast:not(:last-child) { display: none; }
 @media (max-width: 860px) { .admin ~ .toasts { left: 16px; } }
+
+/* ── Polish: scrollbars, segmented controls, header actions ── */
+.admin, .admin * { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+/* Tab strips and segmented controls may scroll sideways on small screens, but never show a bar */
+.admin .adm-tabs, .admin .pr-seg, .admin .or-seg, .admin .pe-steps, .admin .pe-seg { scrollbar-width: none; }
+.admin .sp-seg { flex-wrap: wrap; overflow: visible; }
+.admin .pr-headside { display: flex; align-items: center; justify-content: flex-end; gap: 12px 20px; flex-wrap: wrap; margin-left: auto; }
+.admin .pe-shell { container-type: inline-size; }
+.admin .pe-steps button { flex: 1 1 auto; justify-content: center; }
+.admin .pe-field .pe-seg { display: flex; width: 100%; }
+.admin .pe-field .pe-seg button { flex: 1 1 0; min-width: 0; padding: 8px 10px; }
+@container (max-width: 720px) {
+  .admin .pe-steps:not(.tabs) button:not([aria-current]) .lbl { display: none; }
+  .admin .pe-steps button { padding-inline: 8px; }
+}
+/* The editor's tab nav also has the storefront's .tabs class (bordered, content-width): undo that here */
+.admin .pe-steps.tabs { width: auto; border: 0; border-bottom: var(--hair); }

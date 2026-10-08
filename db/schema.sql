@@ -889,7 +889,18 @@ begin
         from accounts a order by a.created_at desc
       ) t), '[]'),
     'subscribers', coalesce((
-      select jsonb_agg(t) from (select s.email, s.created_at from newsletter_subscribers s order by s.created_at desc) t), '[]')
+      select jsonb_agg(t) from (select s.email, s.created_at from newsletter_subscribers s order by s.created_at desc) t), '[]'),
+    -- Guest checkouts: order emails with no account, grouped
+    'guests', coalesce((
+      select jsonb_agg(t) from (
+        select o.email, (array_agg(o.customer_name order by o.created_at desc))[1] as name,
+               (array_agg(o.city order by o.created_at desc))[1] as city,
+               count(*)::int as orders, coalesce(sum(o.total) filter (where o.status <> 'cancelled'), 0)::bigint as spent,
+               min(o.created_at) as first_order_at, max(o.created_at) as last_order_at
+        from orders o
+        where o.account_id is null and not exists (select 1 from accounts a where a.email = o.email)
+        group by o.email order by max(o.created_at) desc
+      ) t), '[]')
   );
 end
 $$;
@@ -1197,6 +1208,8 @@ begin
   insert into accounts (email, name, password_hash, role)
   values (lower(trim(p ->> 'email')), trim(p ->> 'name'), p ->> 'hash', coalesce(p ->> 'role', 'customer'))
   returning * into a;
+  -- an admin creating the account vouches for the email, so its guest orders move into the account
+  update orders set account_id = a.id where email = a.email and account_id is null;
   return jsonb_build_object('email', a.email, 'name', a.name, 'role', a.role);
 exception when unique_violation then
   return jsonb_build_object('error', 'email_taken');
@@ -1276,3 +1289,30 @@ $$;
 revoke all on function ori_order_for(jsonb), ori_order_summary(orders) from public;
 revoke all on function api_order_lookup(jsonb), api_order_pay(jsonb) from public;
 grant execute on function api_order_lookup(jsonb), api_order_pay(jsonb) to ori_api;
+
+-- One guest (no account): their orders by email
+create or replace function api_admin_guest(p_token text, p_email text)
+returns jsonb
+language plpgsql stable security definer
+set search_path = public, pg_temp
+as $$
+declare v_email text := lower(trim(p_email));
+begin
+  perform ori_require_admin(p_token);
+  if not exists (select 1 from orders where email = v_email and account_id is null) then
+    raise exception 'not_found' using errcode = 'P0002';
+  end if;
+  return (
+    select jsonb_build_object('email', v_email, 'guest', true,
+      'name', (array_agg(o.customer_name order by o.created_at desc))[1],
+      'phone', (array_agg(o.phone order by o.created_at desc) filter (where o.phone is not null))[1],
+      'city', (array_agg(o.city order by o.created_at desc))[1],
+      'has_account', exists (select 1 from accounts a where a.email = v_email),
+      'spent', coalesce(sum(o.total) filter (where o.status <> 'cancelled'), 0),
+      'orders', jsonb_agg(jsonb_build_object('number', o.number, 'status', o.status, 'total', o.total, 'created_at', o.created_at) order by o.created_at desc))
+    from orders o where o.email = v_email and o.account_id is null);
+end
+$$;
+
+revoke all on function api_admin_guest(text, text) from public;
+grant execute on function api_admin_guest(text, text) to ori_api;

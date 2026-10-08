@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { api } from '../api.js'
 import VerificationCard from '../components/VerificationCard.jsx'
 import { findProduct, useVerified } from '../store.js'
 
 const EXAMPLES = ['ORI-NK-AF1-001', 'ORI-AD-SMB-001', 'ORI-NB-550-001']
+const logged = new Map() // one log per code per visit
 
 export default function Verify() {
   const { code } = useParams()
@@ -13,9 +15,21 @@ export default function Verify() {
   const normalized = code?.trim().toUpperCase()
   const product = normalized && findProduct(normalized)
 
+  const [stats, setStats] = useState(null)
+
   useEffect(() => {
     if (product) setHistory((h) => [product.id, ...h.filter((id) => id !== product.id)].slice(0, 5))
   }, [product?.id])
+
+  // Log the check and fetch its history
+  useEffect(() => {
+    setStats(null)
+    if (!normalized) return
+    if (!logged.has(normalized)) logged.set(normalized, api('verify', { body: { code: normalized } }))
+    let live = true
+    logged.get(normalized).then((r) => live && r.ok && r.data.found && setStats(r.data))
+    return () => { live = false }
+  }, [normalized])
 
   const check = (value) => navigate(`/verify/${encodeURIComponent(value.trim().toUpperCase())}`)
   const recent = history.filter((id) => id !== product?.id).map(findProduct).filter(Boolean)
@@ -36,7 +50,7 @@ export default function Verify() {
       </div>
 
       {normalized && (product ? (
-        <VerificationCard product={product} />
+        <VerificationCard product={product} stats={stats} />
       ) : (
         <div className="cert fail" role="alert">
           <p className="bad">✕ PRODUCT NOT FOUND</p>

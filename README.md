@@ -11,6 +11,15 @@ npm run build      # production bundle in dist/
 npm run preview    # serve dist/ locally
 ```
 
+## Backend
+
+Orders, live stock, verification history and newsletter sign-ups are stored in Postgres (Neon) through Vercel Functions in `api/`. Without `DATABASE_URL` the site runs in local mode. Setup and security notes: [`docs/BACKEND.md`](docs/BACKEND.md).
+
+```bash
+cp .env.example .env.local   # add your DATABASE_URL
+npm run db:setup             # create tables, seed products
+```
+
 ## Demo codes
 
 | Valid | Invalid |
@@ -41,7 +50,11 @@ src/
 ├── components/     BrandShelf, ProductViewer, SceneKit, cards, navbar, dialogs
 ├── pages/          Home, Catalog, Product, Verify, Wishlist, Cart, Checkout, OrderSuccess
 ├── data/           products.json
-└── store.js        cart, wishlist, order state in browser storage
+├── api.js          client for /api with local fallback
+└── store.js        cart, wishlist, order state, live inventory
+api/                Vercel Functions: health, inventory, orders, verify, newsletter
+db/                 schema.sql, seed.sql
+scripts/db.mjs      npm run db:setup / db:seed-sql
 ```
 
 `vercel.json` rewrites every route to `index.html` so `/verify/:code` links from QR codes work after a refresh.

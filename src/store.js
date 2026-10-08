@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import products from './data/products.json'
+import { api } from './api.js'
 
 export { products }
 export const brands = [...new Set(products.map((p) => p.brand))]
@@ -74,6 +75,22 @@ export function addToCart(cart, id, size) {
   const hit = cart.find((i) => i.id === id && i.size === size)
   if (!hit) return [...cart, { id, size, qty: 1 }]
   return cart.map((i) => (i === hit ? { ...i, qty: Math.min(i.qty + 1, stock) } : i))
+}
+
+// Live price/stock applied onto the bundled catalog
+export function applyInventory(items = []) {
+  for (const it of items) {
+    const p = products.find((x) => x.id === it.id)
+    if (!p) continue
+    if (Number.isInteger(it.stock)) p.stock = it.stock
+    if (Number.isInteger(it.price)) p.price = it.price
+  }
+  window.dispatchEvent(new Event('ori-inventory'))
+}
+
+export async function syncInventory() {
+  const r = await api('inventory')
+  if (r.ok) applyInventory(r.data.items)
 }
 
 export const orderNumber = () => {

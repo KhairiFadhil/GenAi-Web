@@ -50,6 +50,7 @@ input:user-invalid, textarea:user-invalid { border-color: var(--bad); }
 
 .skip { position: absolute; left: 8px; top: -60px; z-index: 100; background: var(--text); color: var(--bg); padding: 10px 14px; }
 .skip:focus { top: 8px; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .label, dt, legend, .meta { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
@@ -183,6 +184,7 @@ main { min-height: 70vh; }
 .center { text-align: center; }
 .empty { text-align: center; padding: 96px var(--gutter); color: var(--muted); display: grid; justify-items: center; gap: 16px; }
 .empty h1 { color: var(--text); margin: 0; }
+.empty .glyph::before { content: attr(data-glyph); }
 .empty .glyph { font-family: var(--display); font-stretch: 125%; font-weight: 900; font-size: clamp(80px, 18vw, 200px); line-height: 0.9; color: var(--surface-2); -webkit-text-stroke: 1px var(--line-strong); }
 .crumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
 .crumbs a { color: var(--muted); }
@@ -473,6 +475,7 @@ dd { margin: 0; }
 .sum-item .small { display: block; }
 .stack { display: grid; gap: 18px; }
 .stack label { display: grid; gap: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.stack input, .stack textarea, .stack select { font-family: var(--body); font-size: 15px; letter-spacing: normal; text-transform: none; color: var(--text); }
 .stack label .hint { text-transform: none; letter-spacing: 0; font-family: var(--body); font-size: 12px; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
@@ -486,6 +489,8 @@ legend { margin-bottom: 8px; }
 .pay:has(input:checked) { border-color: var(--text); background: var(--surface); }
 .pay input { width: 16px; height: 16px; accent-color: var(--text); margin: 0; }
 .pay .small { font-family: var(--mono); }
+.form-error { border: 1px solid var(--bad); color: var(--bad); padding: 12px 14px; font-size: 13.5px; margin: 0; }
+.form-error ul { margin: 6px 0 0; padding-left: 18px; }
 .notice { border: 1px dashed var(--line-strong); padding: 12px 14px; font-size: 13px; color: var(--muted); }
 /* Receipt printer: --p (0 → 1) advances in 14 short eased ticks with pauses between, like a thermal
    printer feeding line by line; the paper itself slides out of the slot (transform only). */
@@ -592,6 +597,15 @@ th { font-size: 10.5px; letter-spacing: 0.12em; color: var(--muted); font-weight
 th:first-child, td:first-child { text-align: left; }
 tbody tr:hover { background: var(--surface); }
 
+/* Touch targets: at least 24px tall */
+.foot-cols a, .line-info a, .crumbs a { display: inline-block; padding-block: 4px; }
+.logo { padding-block: 4px; }
+
+/* Wide screens: roomier container */
+@media (min-width: 1800px) {
+  .page, .section { max-width: 1600px; }
+}
+
 @media (max-width: 1080px) {
   .toolbar { grid-template-columns: 1fr 1fr; }
   .toolbar .search { grid-column: 1 / -1; }
@@ -630,6 +644,19 @@ tbody tr:hover { background: var(--surface); }
   .shelf-tag { font-size: 11px; padding: 6px 8px; }
   .inline-form { flex-direction: column; }
   .actions { grid-template-columns: 1fr auto; }
+  input, select, textarea, .stack input, .stack textarea, .stack select, .locale select { font-size: 16px; } /* iOS zooms below 16px */
+}
+
+/* Phones in landscape: short screens */
+@media (max-height: 500px) and (orientation: landscape) {
+  .nav, .nav-bar, .is-compact .nav-bar { height: 54px; }
+  .nav-bar { align-items: center; padding-bottom: 0; }
+  .logo small { display: none; }
+  .logo-mark, .is-compact .logo-mark { font-size: 17px; }
+  .mega { top: 54px; max-height: calc(100svh - 64px); overflow: auto; }
+  .shelf { aspect-ratio: auto; height: 86svh; max-height: none; }
+  .viewer { aspect-ratio: auto; height: 82svh; }
+  .mobile-menu { padding-top: 90px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }

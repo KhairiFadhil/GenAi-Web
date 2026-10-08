@@ -4,7 +4,7 @@ import ProductImage from './ProductImage.jsx'
 
 export const verifyUrl = (id) => `${window.location.origin}/verify/${id}`
 
-export default function VerificationCard({ product: p }) {
+export default function VerificationCard({ product: p, stats }) {
   const now = new Date()
   const checked = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
   const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -27,11 +27,17 @@ export default function VerificationCard({ product: p }) {
           <dt>Condition</dt><dd>{p.condition}</dd>
           <dt>Status</dt><dd>Verified original</dd>
           <dt>Checked</dt><dd className="mono">{checked} · {time}</dd>
+          {stats && (
+            <>
+              <dt>History</dt>
+              <dd>{stats.checks === 1 ? 'First check of this ID' : `Checked ${stats.checks} times since ${new Date(stats.first_checked_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`}</dd>
+            </>
+          )}
         </dl>
       </div>
       <div className="cert-foot">
         <div className="row">
-          <div className="qr"><QRCodeSVG value={verifyUrl(p.id)} size={76} bgColor="#F5F5F5" fgColor="#0A0A0A" /></div>
+          <div className="qr"><QRCodeSVG value={verifyUrl(p.id)} title={`QR code: verify ${p.name}`} size={76} bgColor="#F5F5F5" fgColor="#0A0A0A" /></div>
           <p className="small">ORI Verification System<br />Checked against the ORI product registry.</p>
         </div>
         <div className="row no-print">

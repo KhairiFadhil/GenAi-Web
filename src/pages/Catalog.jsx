@@ -86,6 +86,7 @@ export default function Catalog() {
         </div>
       </div>
 
+      <h2 className="sr-only">Products</h2>
       {list.length ? (
         <div className="grid">{list.map((p) => <ProductCard key={p.id} product={p} />)}</div>
       ) : (

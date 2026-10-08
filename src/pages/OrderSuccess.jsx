@@ -73,8 +73,8 @@ export default function OrderSuccess() {
                 <div className="rc-item" key={i.id + i.size}>
                   <div>{p.name}</div>
                   <div className="rc-row rc-sub">
-                    <span>{isNaN(i.size) ? i.size : `EU ${i.size}`} · {i.qty} × {rupiah(p.price)}</span>
-                    <span>{rupiah(p.price * i.qty)}</span>
+                    <span>{isNaN(i.size) ? i.size : `EU ${i.size}`} · {i.qty} × {rupiah(i.price ?? p.price)}</span>
+                    <span>{rupiah((i.price ?? p.price) * i.qty)}</span>
                   </div>
                 </div>
               )

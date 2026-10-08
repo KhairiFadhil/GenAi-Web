@@ -68,12 +68,12 @@ export default function Navbar() {
 
   return (
     <>
-      <div className="announce">
+      <aside className="announce" aria-label="Announcement">
         {/* 4 copies: the marquee loops by sliding exactly half the track (2 copies) */}
         <div className="announce-track">
           {[0, 1, 2, 3].map((i) => <span key={i} aria-hidden={i > 0}>{ANNOUNCE}</span>)}
         </div>
-      </div>
+      </aside>
       <header className={`nav ${atTop ? 'is-top' : 'is-compact'}`} onMouseLeave={() => setMenu(null)}>
         <div className={`nav-bar ${menu ? 'menu-open' : ''}`}>
           <nav className="nav-links" aria-label="Main">

@@ -48,7 +48,7 @@ export default function Product() {
   if (!p) {
     return (
       <div className="page empty">
-        <div className="glyph" aria-hidden="true">?</div>
+        <div className="glyph" data-glyph="?" aria-hidden="true" />
         <h1>Product not found</h1>
         <p>This product ID isn't in the ORI catalog.</p>
         <div className="row"><Link className="btn primary" to="/collection">Back to collection</Link><Link className="btn" to="/verify">Verify an ID</Link></div>
@@ -141,7 +141,7 @@ export default function Product() {
           </dl>
 
           <div className="qr-row">
-            <QRCodeSVG value={verifyUrl(p.id)} size={84} bgColor="#F5F5F5" fgColor="#0A0A0A" />
+            <QRCodeSVG value={verifyUrl(p.id)} title={`QR code: verify ${p.name}`} size={84} bgColor="#F5F5F5" fgColor="#0A0A0A" />
             <div>
               <div className="label">ORI Verification</div>
               <p className="small">Scan with your phone camera to open this product's certificate.</p>

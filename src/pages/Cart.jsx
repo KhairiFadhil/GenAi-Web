@@ -38,7 +38,7 @@ export default function Cart() {
   if (!items.length) {
     return (
       <div className="page empty">
-        <div className="glyph" aria-hidden="true">0</div>
+        <div className="glyph" data-glyph="0" aria-hidden="true" />
         <h1>Cart is empty</h1>
         <p>Pick a size on any product page to add it here.</p>
         <Link className="btn primary" to="/collection">Explore collection</Link>

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useReducer } from 'react'
 import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
 import Toaster from './components/Toaster.jsx'
@@ -10,7 +10,8 @@ import Wishlist from './pages/Wishlist.jsx'
 import Cart from './pages/Cart.jsx'
 import Checkout from './pages/Checkout.jsx'
 import OrderSuccess from './pages/OrderSuccess.jsx'
-import { brands, toast, useStoredState } from './store.js'
+import { api } from './api.js'
+import { brands, syncInventory, toast, useStoredState } from './store.js'
 
 const LOCALES = ['ID / IDR', 'EN / IDR']
 const INFO = [
@@ -30,7 +31,7 @@ const TITLES = { '/collection': 'Collection', '/verify': 'Verify', '/wishlist': 
 function NotFound() {
   return (
     <div className="page empty">
-      <div className="glyph" aria-hidden="true">404</div>
+      <div className="glyph" data-glyph="404" aria-hidden="true" />
       <h1>Page not found</h1>
       <p>This page doesn't exist or has moved.</p>
       <div className="row"><Link className="btn primary" to="/">Back to store</Link><Link className="btn" to="/collection">Browse collection</Link></div>
@@ -41,6 +42,27 @@ function NotFound() {
 export default function App() {
   const { pathname, hash } = useLocation()
   const [locale, setLocale] = useStoredState('ori-locale', LOCALES[0])
+  const [, refresh] = useReducer((n) => n + 1, 0)
+
+  // Live stock and prices, when a database is connected
+  useEffect(() => {
+    window.addEventListener('ori-inventory', refresh)
+    syncInventory()
+    return () => window.removeEventListener('ori-inventory', refresh)
+  }, [])
+
+  const subscribe = async (e) => {
+    e.preventDefault()
+    const form = e.target
+    const { email, website } = Object.fromEntries(new FormData(form))
+    const r = await api('newsletter', { body: { email, website } })
+    if (r.ok || r.offline) {
+      form.reset()
+      toast(r.data?.new === false ? "You're already on the list" : 'Thanks for subscribing')
+    } else {
+      toast('Please enter a valid email address')
+    }
+  }
 
   // New page starts at the top unless a #section is requested
   useEffect(() => {
@@ -86,10 +108,12 @@ export default function App() {
               </div>
             ))}
           </div>
-          <form className="newsletter" onSubmit={(e) => (e.preventDefault(), e.target.reset(), toast('Thanks for subscribing'))}>
+          <form className="newsletter" onSubmit={subscribe}>
             <label htmlFor="news-email"><strong>Newsletter</strong></label>
             <p>Be first to see new drops and 3D showcases.</p>
-            <input id="news-email" className="news-input" type="email" required placeholder="E-MAIL" autoComplete="email" />
+            <input id="news-email" name="email" className="news-input" type="email" required placeholder="E-MAIL" autoComplete="email" />
+            <input className="hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+            <button type="submit" className="sr-only">Subscribe</button>
           </form>
         </div>
         <div className="foot-base">
